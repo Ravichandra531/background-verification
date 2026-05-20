@@ -1,176 +1,152 @@
-# Secure Background Verification Platform (VerifyBGC)
+# VerifyBGC — Background Verification Platform
 
-A secure, scalable, and highly aesthetic Background Verification (BGC) Platform designed for recruiters and administrators to submit candidate details, conduct instant identity verification checks (Aadhaar & PAN) via mock/external API endpoints, inspect detailed response logs, manage user roles (RBAC), and generate/print professional verification reports as PDFs.
+Web application for recruiters and administrators to manage candidates, run identity checks (Aadhaar and PAN via mock APIs), review verification logs, and generate printable verification reports. Sensitive identity data is encrypted at rest and masked in the UI.
 
----
+## Features
 
-## 🚀 Key Features
+- JWT authentication with password policy and role-based access (recruiter / admin)
+- Candidate CRUD with search, filters, and pagination
+- Aadhaar and PAN verification workflow with overall status (verified, partial, failed)
+- Masked display of identity numbers in lists and reports
+- Admin panel for users, global candidates, and statistics
+- PDF-style verification report (browser print)
 
-1. **🔒 Secure Authentication Module**: JWT-based login and registration system with strong password policy enforcement (uppercase, lowercase, digits, and special characters) and encryption-grade password hashing via `bcrypt`.
-2. **👥 Candidate Management (CRUD)**: Complete candidate management interface. Allows adding new candidates, viewing profile directories with search, paginated lists, status filter badges, updating profiles, and deleting candidates.
-3. **🛡️ Identity Verification Engine**:
-   - **Aadhaar Verification**: Formats and validates 12-digit numeric codes against `/mock-api/aadhaar/verify`, returning match details.
-   - **PAN Verification**: Formats and validates letters and digits (e.g. `ABCDE1234F`) against `/mock-api/pan/verify`.
-   - **Verification Workflow**: Computes overall status: `VERIFIED`, `FAILED`, or `PARTIAL` based on multiple checks.
-4. **👁️ Sensitive Data Protection**: Cryptographic masking for identity numbers (`XXXX-XXXX-1234` / `XXXXX1234X`), emails, and phones on list views. In addition, Aadhaar and PAN cards are fully encrypted in the PostgreSQL database using `AES-256-GCM` to ensure data security.
-5. **📊 Premium Analytics Dashboard**: Modern graphs and metrics detailing platform members, vetting cycles, and clearance success rates.
-6. **👑 Role-Based Access Control (RBAC)**: An interactive Admin Control panel allowing system admins to promote/demote members, delete candidates globally, and audit system-wide candidate directories and statistic logs.
-7. **📄 Professional PDF Report Generation**: Elegant corporate candidate verification certificates complete with overall status, detailed vetting logs, digital seals, and signature placeholders. Integrates perfectly with browser print/PDF drivers for instant downloads.
+## Tech stack
 
----
+| Layer | Stack |
+|-------|--------|
+| Frontend | Next.js, React, Tailwind CSS, React Hook Form, Zod, Axios |
+| Backend | Node.js, Express, TypeScript, Prisma |
+| Database | PostgreSQL |
 
-## 🛠️ Technology Stack
-
-### Frontend
-- **Framework**: Next.js 16 (React 19, App Router)
-- **Styling**: Tailwind CSS v4 + Vanilla CSS transitions & blurs
-- **Form Management**: React Hook Form + Zod Schema Validation
-- **Network Client**: Axios
-- **Icons**: Lucide React
-
-### Backend
-- **Framework**: Node.js + Express.js (TypeScript)
-- **Database ORM**: Prisma Client
-- **Authentication**: JWT (JSON Web Tokens)
-- **Security**: Express Rate Limiting, CORS configuration, Bcrypt hashing, AES-256-GCM Cryptography
-
-### Database
-- **Engine**: PostgreSQL (Local/Remote)
-
----
-
-## 📁 Repository Structure
+## Project structure
 
 ```
 background-verification/
-├── backend/                  # REST API Server
-│   ├── prisma/               # Database schemas
-│   ├── src/
-│   │   ├── config/           # DB Client & JWT setups
-│   │   ├── controllers/      # Route handler logic (Auth, Candidates, Verification, Reports)
-│   │   ├── middleware/       # Auth validation, RBAC, Rate-limiters
-│   │   ├── routes/           # REST endpoints
-│   │   ├── types/            # Express request & custom type definitions
-│   │   └── index.ts          # Server entry file
-│   ├── .env                  # Port, DB credentials, encryption keys
-│   └── package.json
-│
-├── frontend/                 # Next.js App Router Client
-│   ├── src/
-│   │   ├── app/              # Routes & layouts
-│   │   ├── components/       # Interface units (Dashboard, Candidates, Reports, Admin)
-│   │   ├── services/         # Axios API connection
-│   │   └── types/            # TypeScript type schemas
-│   ├── .env.local            # Base API URL endpoint
-│   └── package.json
-└── README.md                 # Project Blueprint and User Manual
+├── backend/          # API (Express + Prisma)
+├── frontend/         # Web UI (Next.js)
+├── docker-compose.yml
+├── .env.docker.example
+└── README.md
 ```
 
----
+## Security notice
 
-## ⚙️ Environment Configuration
+**Do not commit real secrets.** Keep these files local only and out of version control:
 
-### Backend Environment Variables (`backend/.env`)
+- `backend/.env`
+- `frontend/.env.local`
+- `.env` (used by Docker Compose)
 
-```ini
-DATABASE_URL="postgresql://user:password@localhost:5432/background_verification?schema=public"
-JWT_SECRET="super-secret-jwt-key-for-background-verification-platform-2026"
-JWT_EXPIRES_IN="24h"
-ENCRYPTION_KEY="0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-PORT=3000
-NODE_ENV="development"
-CORS_ORIGIN="http://localhost:5173"
-```
+Copy from the provided `*.example` files and generate your own values. Never paste production credentials, JWT secrets, or encryption keys into the README, issues, or pull requests.
 
-### Frontend Environment Variables (`frontend/.env.local`)
+## Environment variables
 
-```ini
-NEXT_PUBLIC_API_URL=http://localhost:3000
-PORT=5173
-```
+### Backend (`backend/.env`)
 
----
+Copy `backend/.env.example` to `backend/.env` and set:
 
-## 🐳 Docker (all services)
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `JWT_SECRET` | Strong random secret for signing tokens |
+| `JWT_EXPIRES_IN` | Token lifetime (e.g. `24h`) |
+| `ENCRYPTION_KEY` | 64-character hex key (32 bytes) for field encryption |
+| `PORT` | API port (default `3000`) |
+| `NODE_ENV` | `development` or `production` |
+| `CORS_ORIGIN` | Frontend origin allowed by the API |
+| `API_BASE_URL` | Base URL the API uses for internal mock verification calls |
+| `LOG_LEVEL` | `debug`, `info`, `warn`, or `error` |
 
-```bash
-cp .env.docker.example .env
-docker compose up --build
-```
+### Frontend (`frontend/.env.local`)
 
-- Frontend: http://localhost:5173  
-- API: http://localhost:3000  
-- Health: http://localhost:3000/health · Readiness: http://localhost:3000/ready  
+Copy `frontend/.env.example` to `frontend/.env.local` and set:
 
-See [docs/OPS.md](docs/OPS.md) for CI/CD, logging, and monitoring details.
+| Variable | Description |
+|----------|-------------|
+| `NEXT_PUBLIC_API_URL` | Public URL of the backend API (browser-facing) |
+| `PORT` | Dev server port (default `5173`) |
 
----
+## Run with Docker (recommended for deploy)
 
-## 🚀 Setup & Execution Guide
+**Requirements:** Docker and Docker Compose.
 
-Ensure you have **Node.js** and a local **PostgreSQL** instance running.
+1. Clone the repository and go to the project root.
 
-### 1. Database Initialization
-Verify that your PostgreSQL service is running. Connect to your shell and run:
-```bash
-createdb background_verification
-```
+2. Create a local env file (not committed to git):
 
-### 2. Backend Installation & Start
-Navigate to the backend directory, configure `.env` variables, execute database synchronization, and run the hot-reloading development server:
-```bash
-cd backend
-npm install
-npx prisma db push
-npm run dev
-```
-The server will start on **`http://localhost:3000`**.
+   ```bash
+   cp .env.docker.example .env
+   ```
 
-### 3. Frontend Installation & Start
-Navigate to the frontend directory, configure `.env.local` variables, install dependencies, and launch the dev environment:
-```bash
-cd ../frontend
-npm install
-npm run dev
-```
-The frontend will start on **`http://localhost:5173`**.
+3. Edit `.env` and set strong, unique values for database password, `JWT_SECRET`, and `ENCRYPTION_KEY`. Set `NEXT_PUBLIC_API_URL` and `CORS_ORIGIN` to the URLs users will actually use in the browser (rebuild the frontend image if you change the API URL).
 
----
+4. Start all services:
 
-## 📡 REST API Summary
+   ```bash
+   docker compose up --build -d
+   ```
 
-### Authentication APIs
-- `POST /api/auth/register` — Create a new administrative partner or recruiter user.
-- `POST /api/auth/login` — Sign in and retrieve a secure Bearer token.
+5. Verify:
 
-### Candidate Management APIs
-- `GET /api/candidates` — Fetch candidates matching user ownership, supports search, pagination, and status filters.
-- `POST /api/candidates` — Register a candidate, encrypting Aadhaar/PAN fields.
-- `GET /api/candidates/:id` — Retrieve comprehensive candidate records and individual history log events.
-- `PUT /api/candidates/:id` — Modify profile details.
-- `DELETE /api/candidates/:id` — Remove candidate profile and cascades all dependent verification tables.
+   - UI: port from `FRONTEND_PORT` in `.env` (default `5173`)
+   - API health: `/health` and `/ready` on the backend port (default `3000`)
 
-### Identity Verification APIs
-- `POST /api/verifications/:id/start` — Starts check (`aadhaar`, `pan`, or `all`). Calls mock engine, calculates overall status (`verified`, `partial`, `failed`), and updates Candidate status.
-- `GET /api/verifications/:id/status` — Returns individual verification status and message logs.
-- `POST /mock-api/aadhaar/verify` — Validates format and checks 12-digit Aadhaar.
-- `POST /mock-api/pan/verify` — Validates format and checks alphanumeric PAN.
+6. Stop:
 
-### Report Generation APIs
-- `GET /api/reports/:id` — Downloads verification reports including candidate information and masking.
+   ```bash
+   docker compose down
+   ```
 
-### Role-Based Access (Admin Only) APIs
-- `GET /api/admin/stats` — Audits users, global candidates, and completed verifications count.
-- `GET /api/admin/users` — Lists all registered organizations and platform members.
-- `GET /api/admin/candidates` — Global candidate directory across all recruiter platforms.
-- `PATCH /api/admin/users/:id/role` — Toggles member authorization roles between `user` and `admin`.
-- `DELETE /api/admin/candidates/:id` — Permadelete candidate directories globally.
+For production, use HTTPS in front of the stack (reverse proxy), restrict database exposure, and rotate secrets via your hosting provider’s secret store.
 
----
+## Local development (without Docker)
 
-## 🛡️ Security Implementations
+**Requirements:** Node.js 20+, PostgreSQL.
 
-1. **Sensitive Fields Encryption**: To prevent local database intrusion from leaking candidate identity information, Aadhaar and PAN card records are fully encrypted in transit and at rest using AES-256-GCM symmetric encryption.
-2. **Double-layer Masking**: Identity numbers are fully masked in API lists and generated PDF reports. Recruiters and Admins only see redacted outputs like `XXXX-XXXX-1234` or `XXXXX1234X`.
-3. **Validation & Hashing**: Password hashes are salted and validated via Zod schemas, requiring robust inputs. SQL injections are mitigated globally via Prisma Client queries.
-4. **Rate Limiting**: Integrated using `express-rate-limit` on the `/api` routes (5 attempts per 15 minutes on Auth endpoints) to guard against brute-force intrusion.
+1. Create a PostgreSQL database for the app.
+
+2. Backend:
+
+   ```bash
+   cd backend
+   cp .env.example .env
+   # Edit .env with your local database and generated secrets
+   npm install
+   npx prisma db push
+   npm run dev
+   ```
+
+3. Frontend (separate terminal):
+
+   ```bash
+   cd frontend
+   cp .env.example .env.local
+   # Set NEXT_PUBLIC_API_URL to your running API
+   npm install
+   npm run dev
+   ```
+
+## API overview
+
+Authentication: `POST /api/auth/register`, `POST /api/auth/login`
+
+Candidates: `GET|POST /api/candidates`, `GET|PUT|DELETE /api/candidates/:id`
+
+Verification: `POST /api/verifications/:id/start`, `GET /api/verifications/:id/status`
+
+Reports: `GET /api/reports/:id`
+
+Admin (admin role): `/api/admin/*`
+
+Mock verification (development): `POST /mock-api/aadhaar/verify`, `POST /mock-api/pan/verify`
+
+Observability: `GET /health`, `GET /ready`, `GET /metrics`
+
+## CI
+
+GitHub Actions runs backend build, frontend lint/build, and Docker image build on pushes and pull requests to `main` / `master`. The workflow uses `.env.docker.example` only for compose build defaults—not production secrets.
+
+## License
+
+ISC (see package manifests in `backend/` and `frontend/`).
