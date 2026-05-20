@@ -32,8 +32,8 @@ export interface VerificationLog {
   id: string;
   candidateId: string;
   verificationType: 'aadhaar' | 'pan';
-  requestPayload: any;
-  responsePayload: any;
+  requestPayload: Record<string, unknown>;
+  responsePayload: Record<string, unknown>;
   verificationStatus: 'completed' | 'failed';
   verifiedAt: string;
 }
@@ -53,7 +53,7 @@ export interface ReportData {
     type: 'aadhaar' | 'pan';
     status: 'completed' | 'failed';
     verifiedAt: string;
-    details: any;
+    details: Record<string, unknown>;
   }[];
   generatedAt: string;
   verifiedBy?: string;

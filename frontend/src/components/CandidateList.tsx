@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -92,7 +92,7 @@ export default function CandidateList({ onViewDetails, openCreateImmediately, on
     resolver: zodResolver(candidateFormSchema),
   });
 
-  const loadCandidates = async () => {
+  const loadCandidates = useCallback(async () => {
     setLoading(true);
     try {
       const statusParam = statusFilter !== 'all' ? `&status=${statusFilter}` : '';
@@ -107,26 +107,9 @@ export default function CandidateList({ onViewDetails, openCreateImmediately, on
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, statusFilter, search, limit]);
 
-  useEffect(() => {
-    loadCandidates();
-  }, [page, statusFilter]);
-
-  useEffect(() => {
-    if (openCreateImmediately) {
-      openAddModal();
-      if (onClearCreateFlag) onClearCreateFlag();
-    }
-  }, [openCreateImmediately]);
-
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setPage(1);
-    loadCandidates();
-  };
-
-  const openAddModal = () => {
+  const openAddModal = useCallback(() => {
     setServerError(null);
     reset({
       fullName: '',
@@ -138,28 +121,44 @@ export default function CandidateList({ onViewDetails, openCreateImmediately, on
       address: '',
     });
     setIsAddModalOpen(true);
+  }, [reset]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch list when filters change
+    void loadCandidates();
+  }, [loadCandidates]);
+
+  useEffect(() => {
+    if (!openCreateImmediately) return;
+    queueMicrotask(() => {
+      openAddModal();
+      onClearCreateFlag?.();
+    });
+  }, [openCreateImmediately, openAddModal, onClearCreateFlag]);
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setPage(1);
+    loadCandidates();
   };
 
   const openEditModal = async (candidate: Candidate) => {
     setServerError(null);
     setSelectedCandidate(candidate);
     
-    // Fetch individual candidate details first to get editable (masked but decryptable if allowed) properties.
-    // Note: Backend decrypts Aadhaar and PAN, but returns masked data. The fields can be filled out with the masked values or re-entered. Let's populate the edit fields.
     try {
       setLoading(true);
       const res = await api.get(`/api/candidates/${candidate.id}`);
       const fullDetails = res.data.candidate;
       
-      // Formatting date of birth to YYYY-MM-DD
       const formattedDOB = fullDetails.dob ? new Date(fullDetails.dob).toISOString().split('T')[0] : '';
       
       reset({
         fullName: fullDetails.fullName,
         email: fullDetails.email,
         phone: fullDetails.phone,
-        aadhaarNumber: '123412341234', // Fill placeholders to satisfy regex since they are encrypted in DB
-        panNumber: 'ABCDE1234F', // Fill placeholders to satisfy regex since they are encrypted in DB
+        aadhaarNumber: '123412341234',
+        panNumber: 'ABCDE1234F',
         dob: formattedDOB,
         address: fullDetails.address,
       });
@@ -178,8 +177,9 @@ export default function CandidateList({ onViewDetails, openCreateImmediately, on
       await api.post('/api/candidates', data);
       setIsAddModalOpen(false);
       loadCandidates();
-    } catch (error: any) {
-      setServerError(error.response?.data?.error || 'Failed to create candidate. Please verify details.');
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { error?: string } } };
+      setServerError(err.response?.data?.error || 'Failed to create candidate. Please verify details.');
     } finally {
       setSubmitting(false);
     }
@@ -190,16 +190,16 @@ export default function CandidateList({ onViewDetails, openCreateImmediately, on
     setSubmitting(true);
     setServerError(null);
     try {
-      // If Aadhaar and PAN are left as placeholder/masks, we exclude them from updates to avoid rewriting dummy data
-      const payload: any = { ...data };
+      const payload: Partial<CandidateFormValues> = { ...data };
       if (payload.aadhaarNumber === '123412341234') delete payload.aadhaarNumber;
       if (payload.panNumber === 'ABCDE1234F') delete payload.panNumber;
 
       await api.put(`/api/candidates/${selectedCandidate.id}`, payload);
       setIsEditModalOpen(false);
       loadCandidates();
-    } catch (error: any) {
-      setServerError(error.response?.data?.error || 'Failed to update candidate details.');
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { error?: string } } };
+      setServerError(err.response?.data?.error || 'Failed to update candidate details.');
     } finally {
       setSubmitting(false);
     }

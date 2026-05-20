@@ -21,10 +21,12 @@ export default function Home() {
     if (typeof window !== 'undefined') {
       const savedToken = localStorage.getItem('token') || sessionStorage.getItem('token');
       const savedUser = localStorage.getItem('user') || sessionStorage.getItem('user');
-      if (savedToken && savedUser) {
-        setUser(JSON.parse(savedUser));
-      }
-      setLoading(false);
+      const u = savedToken && savedUser ? JSON.parse(savedUser) as User : null;
+      
+      Promise.resolve().then(() => {
+        if (u) setUser(u);
+        setLoading(false);
+      });
     }
   }, []);
 

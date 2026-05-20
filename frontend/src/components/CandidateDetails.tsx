@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 import { Candidate, VerificationLog, ReportData, User } from '../types';
 import {
@@ -54,7 +54,7 @@ export default function CandidateDetails({ candidateId, onBack, user }: Candidat
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const fetchDetails = async () => {
+  const fetchDetails = useCallback(async () => {
     setLoading(true);
     try {
       const response = await api.get(`/api/candidates/${candidateId}`);
@@ -64,11 +64,13 @@ export default function CandidateDetails({ candidateId, onBack, user }: Candidat
     } finally {
       setLoading(false);
     }
-  };
+  }, [candidateId]);
 
   useEffect(() => {
-    fetchDetails();
-  }, [candidateId]);
+    Promise.resolve().then(() => {
+      fetchDetails();
+    });
+  }, [fetchDetails]);
 
   const handleStartVerification = async (type: 'aadhaar' | 'pan' | 'all') => {
     setVerifying(true);
@@ -250,7 +252,7 @@ export default function CandidateDetails({ candidateId, onBack, user }: Candidat
                   </span>
                 </div>
                 <p className="mt-2 text-sm text-slate-600">
-                  {log.responsePayload?.message || log.responsePayload?.error || 'Processed via mock API.'}
+                  {String(log.responsePayload?.message ?? log.responsePayload?.error ?? 'Processed via mock API.')}
                 </p>
                 <button
                   type="button"
