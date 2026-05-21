@@ -1,0 +1,1 @@
+{"version":3,"file":"roleCheck.d.ts","sourceRoot":"","sources":["../../src/middleware/roleCheck.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,QAAQ,EAAE,YAAY,EAAE,MAAM,SAAS,CAAC;AACjD,OAAO,EAAE,WAAW,EAAE,MAAM,mBAAmB,CAAC;AAEhD,eAAO,MAAM,WAAW,GAAI,GAAG,cAAc,MAAM,EAAE,MAC3C,KAAK,WAAW,EAAE,KAAK,QAAQ,EAAE,MAAM,YAAY,KAAG,IAa/D,CAAC"}
