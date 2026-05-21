@@ -24,7 +24,7 @@ model Candidate {
   phone            String            @unique
   aadhaarNumber    String
   panNumber        String
-  panHash          String?           @unique
+  panHash          String?
   dob              DateTime
   address          String
   status           String
