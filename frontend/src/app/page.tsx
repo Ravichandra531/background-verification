@@ -77,7 +77,7 @@ export default function Home() {
 
   if (!user) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
+      <div className="flex min-h-screen items-center justify-center bg-black p-0">
         <Login onAuthSuccess={handleAuthSuccess} />
       </div>
     );

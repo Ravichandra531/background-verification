@@ -230,8 +230,8 @@ export default function CandidateList({ onViewDetails, openCreateImmediately, on
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 rounded-lg border border-slate-200 bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm md:flex-row md:items-center md:justify-between">
         
         {/* Search */}
         <form onSubmit={handleSearchSubmit} className="flex-1 max-w-md relative group">
@@ -241,19 +241,19 @@ export default function CandidateList({ onViewDetails, openCreateImmediately, on
             placeholder="Search candidate name, email, phone..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-md border border-slate-200 bg-white py-2.5 pl-9 pr-20 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+            className="w-full rounded-md border border-slate-200 bg-white py-2 pl-9 pr-16 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
           />
           <button
             type="submit"
-            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200"
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200"
           >
             Search
           </button>
         </form>
 
         {/* Filter and Action */}
-        <div className="flex items-center flex-wrap gap-3">
-          <div className="flex flex-wrap gap-1 rounded-md border border-slate-200 p-1">
+        <div className="flex items-center flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1 rounded-md border border-slate-200 p-0.5">
             {['all', 'pending', 'verified', 'partial', 'failed'].map((status) => (
               <button
                 key={status}
@@ -262,7 +262,7 @@ export default function CandidateList({ onViewDetails, openCreateImmediately, on
                   setStatusFilter(status);
                   setPage(1);
                 }}
-                className={`rounded px-3 py-1.5 text-xs font-medium capitalize ${
+                className={`rounded px-2.5 py-1 text-xs font-medium capitalize ${
                   statusFilter === status
                     ? 'bg-slate-900 text-white'
                     : 'text-slate-600 hover:bg-slate-50'
@@ -276,7 +276,7 @@ export default function CandidateList({ onViewDetails, openCreateImmediately, on
           <button
             type="button"
             onClick={openAddModal}
-            className="inline-flex items-center gap-2 rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+            className="inline-flex items-center gap-1.5 rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800"
           >
             <Plus className="w-4 h-4" />
             <span>Add Candidate</span>
@@ -286,14 +286,14 @@ export default function CandidateList({ onViewDetails, openCreateImmediately, on
 
       <div className="rounded-lg border border-slate-200 bg-white shadow-sm">
         {loading && candidates.length === 0 ? (
-          <div className="space-y-3 p-5">
+          <div className="space-y-2 p-4">
             {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="h-12 animate-pulse rounded bg-slate-100" />
+              <div key={i} className="h-10 animate-pulse rounded bg-slate-100" />
             ))}
           </div>
         ) : candidates.length === 0 ? (
-          <div className="py-16 text-center">
-            <User className="mx-auto mb-3 h-10 w-10 text-slate-300" />
+          <div className="py-12 text-center">
+            <User className="mx-auto mb-2 h-8 w-8 text-slate-300" />
             <h4 className="text-sm font-semibold text-slate-700">No candidates found</h4>
             <p className="mx-auto mt-1 max-w-xs text-xs text-slate-500">
               Adjust your search or add a new candidate.
@@ -305,73 +305,73 @@ export default function CandidateList({ onViewDetails, openCreateImmediately, on
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-100 text-xs font-medium uppercase tracking-wide text-slate-500">
-                    <th className="px-5 py-4 w-1/4">Candidate details</th>
-                    <th className="px-5 py-4 w-1/4">Contact details</th>
-                    <th className="px-5 py-4 w-1/6">Status</th>
-                    <th className="px-5 py-4 w-1/6">Created</th>
-                    <th className="px-5 py-4 w-1/6 text-right">Actions</th>
+                    <th className="px-4 py-3 w-1/4">Candidate details</th>
+                    <th className="px-4 py-3 w-1/4">Contact details</th>
+                    <th className="px-4 py-3 w-1/6">Status</th>
+                    <th className="px-4 py-3 w-1/6">Created</th>
+                    <th className="px-4 py-3 w-1/6 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {candidates.map((candidate) => (
                     <tr key={candidate.id} className="hover:bg-slate-50">
-                      <td className="px-5 py-4 w-1/4">
+                      <td className="px-4 py-3 w-1/4">
                         <div className="font-medium text-slate-900 truncate">{candidate.fullName}</div>
-                        <div className="mt-1 font-mono text-xs text-slate-400 truncate">{candidate.id}</div>
+                        <div className="mt-0.5 font-mono text-xs text-slate-400 truncate">{candidate.id}</div>
                       </td>
-                      <td className="px-5 py-4 w-1/4">
+                      <td className="px-4 py-3 w-1/4">
                         <div className="flex items-center gap-1.5 text-xs text-slate-600 truncate">
                           <Mail className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
                           <span className="truncate">{candidate.email}</span>
                         </div>
-                        <div className="mt-2 flex items-center gap-1.5 text-xs text-slate-500 truncate">
+                        <div className="mt-1.5 flex items-center gap-1.5 text-xs text-slate-500 truncate">
                           <Phone className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
                           <span className="truncate">{candidate.phone}</span>
                         </div>
                       </td>
-                      <td className="px-5 py-4 w-1/6">
-                        <span className={`inline-flex rounded-md border px-2 py-1 text-xs font-medium capitalize whitespace-nowrap ${getStatusBadgeClasses(candidate.status)}`}>
+                      <td className="px-4 py-3 w-1/6">
+                        <span className={`inline-flex rounded-md border px-2 py-0.5 text-xs font-medium capitalize whitespace-nowrap ${getStatusBadgeClasses(candidate.status)}`}>
                           {candidate.status}
                         </span>
                       </td>
-                      <td className="px-5 py-4 w-1/6 text-slate-500 whitespace-nowrap">
+                      <td className="px-4 py-3 w-1/6 text-slate-500 whitespace-nowrap text-xs">
                         {new Date(candidate.createdAt).toLocaleDateString('en-GB', {
                           day: '2-digit',
                           month: 'short',
                           year: 'numeric'
                         })}
                       </td>
-                      <td className="px-5 py-4 w-1/6 text-right">
-                        <div className="flex items-center justify-end gap-2">
+                      <td className="px-4 py-3 w-1/6 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
                           <button
                             type="button"
                             onClick={() => onViewDetails(candidate.id)}
-                            className="rounded-md border border-slate-200 p-2 text-slate-600 hover:bg-slate-50"
+                            className="rounded-md border border-slate-200 p-1.5 text-slate-600 hover:bg-slate-50"
                             title="View details"
                           >
-                            <Eye className="w-4 h-4" />
+                            <Eye className="w-3.5 h-3.5" />
                           </button>
                           <button
                             type="button"
                             onClick={() => openEditModal(candidate)}
-                            className="rounded-md border border-slate-200 p-2 text-slate-600 hover:bg-slate-50"
+                            className="rounded-md border border-slate-200 p-1.5 text-slate-600 hover:bg-slate-50"
                             title="Edit"
                           >
-                            <Edit3 className="w-4 h-4" />
+                            <Edit3 className="w-3.5 h-3.5" />
                           </button>
                           
                           {deleteConfirmId === candidate.id ? (
-                            <div className="flex items-center space-x-1.5 bg-rose-50 dark:bg-rose-950/30 border border-rose-200/50 rounded-lg p-1">
+                            <div className="flex items-center space-x-1 bg-rose-50 border border-rose-200/50 rounded-md p-0.5">
                               <span className="text-3xs font-bold uppercase tracking-wider text-rose-500 px-1">Confirm?</span>
                               <button
                                 onClick={() => handleDelete(candidate.id)}
-                                className="px-2 py-1 bg-rose-600 text-white rounded text-3xs font-bold hover:bg-rose-700"
+                                className="px-1.5 py-0.5 bg-rose-600 text-white rounded text-3xs font-bold hover:bg-rose-700"
                               >
                                 Yes
                               </button>
                               <button
                                 onClick={() => setDeleteConfirmId(null)}
-                                className="px-2 py-1 bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded text-3xs font-bold"
+                                className="px-1.5 py-0.5 bg-zinc-200 text-zinc-600 rounded text-3xs font-bold"
                               >
                                 No
                               </button>
@@ -380,10 +380,10 @@ export default function CandidateList({ onViewDetails, openCreateImmediately, on
                             <button
                               type="button"
                               onClick={() => setDeleteConfirmId(candidate.id)}
-                              className="rounded-md border border-slate-200 p-2 text-slate-600 hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+                              className="rounded-md border border-slate-200 p-1.5 text-slate-600 hover:border-red-200 hover:bg-red-50 hover:text-red-600"
                               title="Delete"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           )}
                         </div>
@@ -396,23 +396,23 @@ export default function CandidateList({ onViewDetails, openCreateImmediately, on
 
             {/* Pagination Controls */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between border-t border-slate-100 px-5 py-4 text-sm text-slate-500">
-                <span>
+              <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-sm text-slate-500">
+                <span className="text-xs">
                   Page <strong className="text-slate-700">{page}</strong> of <strong className="text-slate-700">{totalPages}</strong> ({totalCandidates} total)
                 </span>
                 
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-1.5">
                   <button
                     onClick={() => setPage(p => Math.max(1, p - 1))}
                     disabled={page === 1}
-                    className="rounded-md border border-slate-200 p-2 hover:bg-slate-50 disabled:opacity-40"
+                    className="rounded-md border border-slate-200 p-1.5 hover:bg-slate-50 disabled:opacity-40"
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                     disabled={page === totalPages}
-                    className="rounded-md border border-slate-200 p-2 hover:bg-slate-50 disabled:opacity-40"
+                    className="rounded-md border border-slate-200 p-1.5 hover:bg-slate-50 disabled:opacity-40"
                   >
                     <ChevronRight className="w-4 h-4" />
                   </button>
