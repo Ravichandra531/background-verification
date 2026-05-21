@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import CandidateList from '../components/CandidateList';
-import * as api from '../services/api';
+import api from '../services/api';
 
 jest.mock('../services/api');
 
@@ -31,7 +31,7 @@ describe('CandidateList Component', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (api.default.get as jest.Mock).mockResolvedValue({
+    (api.get as jest.Mock).mockResolvedValue({
       data: {
         candidates: mockCandidates,
         pagination: { total: 2, totalPages: 1 },
@@ -81,7 +81,7 @@ describe('CandidateList Component', () => {
     });
 
     it('should show empty state when no candidates', async () => {
-      (api.default.get as jest.Mock).mockResolvedValue({
+      (api.get as jest.Mock).mockResolvedValue({
         data: {
           candidates: [],
           pagination: { total: 0, totalPages: 1 },
@@ -115,7 +115,7 @@ describe('CandidateList Component', () => {
       await userEvent.click(screen.getByText('Search'));
 
       await waitFor(() => {
-        expect(api.default.get).toHaveBeenCalledWith(
+        expect(api.get).toHaveBeenCalledWith(
           expect.stringContaining('search=John')
         );
       });
@@ -135,7 +135,7 @@ describe('CandidateList Component', () => {
       });
 
       await waitFor(() => {
-        expect(api.default.get).toHaveBeenCalledWith(
+        expect(api.get).toHaveBeenCalledWith(
           expect.stringContaining('status=verified')
         );
       });
@@ -303,7 +303,7 @@ describe('CandidateList Component', () => {
     });
 
     it('should delete candidate on confirmation', async () => {
-      (api.default.delete as jest.Mock).mockResolvedValue({ data: {} });
+      (api.delete as jest.Mock).mockResolvedValue({ data: {} });
 
       render(
         <CandidateList
@@ -321,7 +321,7 @@ describe('CandidateList Component', () => {
       await userEvent.click(yesButton);
 
       await waitFor(() => {
-        expect(api.default.delete).toHaveBeenCalled();
+        expect(api.delete).toHaveBeenCalled();
       });
     });
   });

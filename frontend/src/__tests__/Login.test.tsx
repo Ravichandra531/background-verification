@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Login from '../components/Login';
-import * as api from '../services/api';
+import api from '../services/api';
 
 jest.mock('../services/api');
 
@@ -63,7 +63,7 @@ describe('Login Component', () => {
       const mockUser = { id: '1', name: 'John', email: 'john@test.com', role: 'user' };
       const mockToken = 'jwt-token';
 
-      (api.default.post as jest.Mock).mockResolvedValue({
+      (api.post as jest.Mock).mockResolvedValue({
         data: { user: mockUser, token: mockToken },
       });
 
@@ -79,7 +79,7 @@ describe('Login Component', () => {
     });
 
     it('should show error message on failed login', async () => {
-      (api.default.post as jest.Mock).mockRejectedValue({
+      (api.post as jest.Mock).mockRejectedValue({
         response: { data: { error: 'Invalid credentials' } },
       });
 
@@ -95,7 +95,7 @@ describe('Login Component', () => {
     });
 
     it('should show loading state during submission', async () => {
-      (api.default.post as jest.Mock).mockImplementation(
+      (api.post as jest.Mock).mockImplementation(
         () => new Promise(resolve => setTimeout(() => resolve({ data: {} }), 100))
       );
 
@@ -116,7 +116,7 @@ describe('Login Component', () => {
       const mockUser = { id: '1', name: 'John', email: 'john@test.com', role: 'user' };
       const mockToken = 'jwt-token';
 
-      (api.default.post as jest.Mock).mockResolvedValue({
+      (api.post as jest.Mock).mockResolvedValue({
         data: { user: mockUser, token: mockToken },
       });
 
