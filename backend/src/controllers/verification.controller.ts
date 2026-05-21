@@ -236,8 +236,8 @@ export const start = async (req: AuthRequest, res: Response): Promise<void> => {
       data: results.map((v) => ({
         candidateId: id,
         verificationType: v.type,
-        requestPayload: v.requestPayload as any,
-        responsePayload: v.responsePayload as any,
+        requestPayload: { timestamp: new Date().toISOString() } as any,
+        responsePayload: { status: v.verificationStatus === 'completed' ? 'verified' : 'failed' } as any,
         verificationStatus: v.verificationStatus,
       })),
     });

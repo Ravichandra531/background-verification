@@ -51,7 +51,6 @@ export default function CandidateDetails({ candidateId, onBack, user }: Candidat
   const [verifying, setVerifying] = useState(false);
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [showReportModal, setShowReportModal] = useState(false);
-  const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const fetchDetails = useCallback(async () => {
@@ -236,7 +235,7 @@ export default function CandidateDetails({ candidateId, onBack, user }: Candidat
           <ul className="divide-y divide-slate-100">
             {logs.map((log) => (
               <li key={log.id} className="px-5 py-4">
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-3">
                   <span className="text-sm font-medium capitalize text-slate-900">{log.verificationType}</span>
                   <span
                     className={`rounded-md border px-2 py-0.5 text-xs font-medium ${
@@ -251,21 +250,6 @@ export default function CandidateDetails({ candidateId, onBack, user }: Candidat
                     {new Date(log.verifiedAt).toLocaleString('en-GB')}
                   </span>
                 </div>
-                <p className="mt-2 text-sm text-slate-600">
-                  {String(log.responsePayload?.message ?? log.responsePayload?.error ?? 'Processed via mock API.')}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setExpandedLogId(expandedLogId === log.id ? null : log.id)}
-                  className="mt-2 text-xs font-medium text-slate-600 hover:text-slate-900"
-                >
-                  {expandedLogId === log.id ? 'Hide details' : 'Show API payload'}
-                </button>
-                {expandedLogId === log.id && (
-                  <pre className="mt-2 overflow-x-auto rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
-                    {JSON.stringify({ request: log.requestPayload, response: log.responsePayload }, null, 2)}
-                  </pre>
-                )}
               </li>
             ))}
           </ul>
