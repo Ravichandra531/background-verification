@@ -75,6 +75,13 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
         <div className="mt-4 flex flex-wrap gap-3">
           <button
             type="button"
+            onClick={() => onNavigate('dashboard')}
+            className="inline-flex items-center gap-2 rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+          >
+            Verify BGC
+          </button>
+          <button
+            type="button"
             onClick={() => onNavigate('add-candidate')}
             className="inline-flex items-center gap-2 rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
           >
