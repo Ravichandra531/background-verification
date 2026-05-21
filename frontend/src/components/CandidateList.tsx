@@ -298,43 +298,43 @@ export default function CandidateList({ onViewDetails, openCreateImmediately, on
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-100 text-xs font-medium uppercase tracking-wide text-slate-500">
-                    <th className="pb-3">Candidate details</th>
-                    <th className="pb-3">Contact details</th>
-                    <th className="pb-3">Status</th>
-                    <th className="pb-3">Created</th>
-                    <th className="pb-3 text-right">Actions</th>
+                    <th className="px-5 py-4 w-1/4">Candidate details</th>
+                    <th className="px-5 py-4 w-1/4">Contact details</th>
+                    <th className="px-5 py-4 w-1/6">Status</th>
+                    <th className="px-5 py-4 w-1/6">Created</th>
+                    <th className="px-5 py-4 w-1/6 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {candidates.map((candidate) => (
                     <tr key={candidate.id} className="hover:bg-slate-50">
-                      <td className="px-5 py-3">
-                        <div className="font-medium text-slate-900">{candidate.fullName}</div>
-                        <div className="mt-0.5 font-mono text-xs text-slate-400">{candidate.id}</div>
+                      <td className="px-5 py-4 w-1/4">
+                        <div className="font-medium text-slate-900 truncate">{candidate.fullName}</div>
+                        <div className="mt-1 font-mono text-xs text-slate-400 truncate">{candidate.id}</div>
                       </td>
-                      <td className="px-5 py-3">
-                        <div className="flex items-center gap-1.5 text-xs text-slate-600">
-                          <Mail className="h-3.5 w-3.5 text-slate-400" />
-                          {candidate.email}
+                      <td className="px-5 py-4 w-1/4">
+                        <div className="flex items-center gap-1.5 text-xs text-slate-600 truncate">
+                          <Mail className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+                          <span className="truncate">{candidate.email}</span>
                         </div>
-                        <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
-                          <Phone className="h-3.5 w-3.5 text-slate-400" />
-                          {candidate.phone}
+                        <div className="mt-2 flex items-center gap-1.5 text-xs text-slate-500 truncate">
+                          <Phone className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+                          <span className="truncate">{candidate.phone}</span>
                         </div>
                       </td>
-                      <td className="px-5 py-3">
-                        <span className={`inline-flex rounded-md border px-2 py-0.5 text-xs font-medium capitalize ${statusChip(candidate.status)}`}>
+                      <td className="px-5 py-4 w-1/6">
+                        <span className={`inline-flex rounded-md border px-2 py-1 text-xs font-medium capitalize whitespace-nowrap ${statusChip(candidate.status)}`}>
                           {candidate.status}
                         </span>
                       </td>
-                      <td className="px-5 py-3 text-slate-500">
+                      <td className="px-5 py-4 w-1/6 text-slate-500 whitespace-nowrap">
                         {new Date(candidate.createdAt).toLocaleDateString('en-GB', {
                           day: '2-digit',
                           month: 'short',
                           year: 'numeric'
                         })}
                       </td>
-                      <td className="px-5 py-3 text-right">
+                      <td className="px-5 py-4 w-1/6 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button
                             type="button"
