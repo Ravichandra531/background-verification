@@ -1,0 +1,9 @@
+# Render should NOT ignore dist folder (it's built during deployment)
+# Only ignore these:
+node_modules/
+.env
+*.log
+.DS_Store
+src/__tests__/
+*.test.ts
+*.spec.ts
