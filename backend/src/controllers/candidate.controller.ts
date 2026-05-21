@@ -187,11 +187,6 @@ export const getCandidateById = async (req: AuthRequest, res: Response): Promise
         id,
         createdById: req.user?.userId,
       },
-      include: {
-        verificationLogs: {
-          orderBy: { verifiedAt: 'desc' },
-        },
-      },
     });
 
     if (!candidate) {
@@ -204,9 +199,16 @@ export const getCandidateById = async (req: AuthRequest, res: Response): Promise
 
     res.status(200).json({
       candidate: {
-        ...candidate,
+        id: candidate.id,
+        fullName: candidate.fullName,
+        email: candidate.email,
+        phone: maskPhone(candidate.phone),
         aadhaarNumber: maskAadhaar(aadhaar),
         panNumber: maskPan(pan),
+        dob: candidate.dob,
+        address: candidate.address,
+        status: candidate.status,
+        createdAt: candidate.createdAt,
       },
     });
   } catch (err) {

@@ -264,7 +264,6 @@ export const start = async (req: AuthRequest, res: Response): Promise<void> => {
       verifications: results.map((v) => ({
         type: v.type,
         status: v.verificationStatus,
-        result: v.responsePayload,
       })),
       summary: {
         total: results.length,
@@ -314,12 +313,6 @@ export const getStatus = async (req: AuthRequest, res: Response): Promise<void> 
         type: log.verificationType,
         status: log.verificationStatus,
         verifiedAt: log.verifiedAt,
-        message:
-          typeof log.responsePayload === 'object' &&
-          log.responsePayload !== null &&
-          'message' in log.responsePayload
-            ? (log.responsePayload as Record<string, unknown>).message
-            : undefined,
       })),
       summary: {
         total: candidate.verificationLogs.length,
