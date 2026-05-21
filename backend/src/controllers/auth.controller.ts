@@ -3,7 +3,7 @@ import prisma from '../config/database.js';
 import bcrypt from 'bcrypt';
 import { generateToken } from '../config/jwt.js';
 
-const SALT = 10;
+const SALT = parseInt(process.env.BCRYPT_SALT || '10', 10);
 const passRe = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/;
 
 export const register = async (req: Request, res: Response): Promise<void> => {
