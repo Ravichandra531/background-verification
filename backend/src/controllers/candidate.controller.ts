@@ -167,9 +167,16 @@ export const createCandidate = async (req: AuthRequest, res: Response): Promise<
     res.status(201).json({
       message: 'Candidate created successfully',
       candidate: {
-        ...candidate,
+        id: candidate.id,
+        fullName: candidate.fullName,
+        email: maskEmail(email),
+        phone: maskPhone(phone),
         aadhaarNumber: maskAadhaar(aadhaarNumber),
         panNumber: maskPan(panNumber),
+        dob: candidate.dob,
+        address: candidate.address,
+        status: candidate.status,
+        createdAt: candidate.createdAt,
       },
     });
   } catch (err) {
@@ -201,7 +208,7 @@ export const getCandidateById = async (req: AuthRequest, res: Response): Promise
       candidate: {
         id: candidate.id,
         fullName: candidate.fullName,
-        email: candidate.email,
+        email: maskEmail(candidate.email),
         phone: maskPhone(candidate.phone),
         aadhaarNumber: maskAadhaar(aadhaar),
         panNumber: maskPan(pan),
@@ -265,9 +272,16 @@ export const updateCandidate = async (req: AuthRequest, res: Response): Promise<
     res.status(200).json({
       message: 'Candidate updated successfully',
       candidate: {
-        ...candidate,
+        id: candidate.id,
+        fullName: candidate.fullName,
+        email: maskEmail(candidate.email),
+        phone: maskPhone(candidate.phone),
         aadhaarNumber: maskAadhaar(aadhaar),
         panNumber: maskPan(pan),
+        dob: candidate.dob,
+        address: candidate.address,
+        status: candidate.status,
+        createdAt: candidate.createdAt,
       },
     });
   } catch (err) {
