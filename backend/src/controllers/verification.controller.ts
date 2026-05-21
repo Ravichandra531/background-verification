@@ -113,6 +113,31 @@ const mapApiResultToLogStatus = (result: VerifyResult): 'completed' | 'failed' =
 
 const runVerify = async ({ type, candidateId, aadhaar, pan }: RunParams): Promise<VerifyOut> => {
   try {
+    // Check for PAN duplicate when verifying Aadhaar
+    if (type === 'aadhaar' && pan) {
+      const panConflict = await findCandidateFieldConflict(
+        { panNumber: pan },
+        candidateId
+      );
+      
+      if (panConflict && panConflict.field === 'panNumber') {
+        return {
+          type,
+          requestPayload: {
+            candidateId,
+            verificationType: type,
+            timestamp: new Date().toISOString(),
+            duplicateField: 'panNumber',
+          },
+          responsePayload: {
+            status: 'failed',
+            message: panConflict.message,
+          },
+          verificationStatus: 'failed',
+        };
+      }
+    }
+
     const result =
       type === 'aadhaar'
         ? await handlers.aadhaar(aadhaar || '')
@@ -204,8 +229,6 @@ export const start = async (req: AuthRequest, res: Response): Promise<void> => {
       {
         email: normalizeCandidateEmail(candidate.email),
         phone: normalizeCandidatePhone(candidate.phone),
-        panNumber: pan ?? undefined,
-        aadhaarNumber: aadhaar ?? undefined,
       },
       id
     );
