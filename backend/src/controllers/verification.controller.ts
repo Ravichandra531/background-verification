@@ -8,6 +8,12 @@ import {
   normalizePan,
 } from '../utils/documentValidation.js';
 import { computeCandidateStatus } from '../utils/verificationStatus.js';
+import {
+  findCandidateFieldConflict,
+  buildDuplicateVerificationFailure,
+  normalizeCandidateEmail,
+  normalizeCandidatePhone,
+} from '../utils/candidateUniqueness.js';
 
 const sanitize = (data: Record<string, unknown> = {}): Record<string, unknown> => {
   const sensitive = new Set([
@@ -165,6 +171,8 @@ export const start = async (req: AuthRequest, res: Response): Promise<void> => {
       },
       select: {
         id: true,
+        email: true,
+        phone: true,
         aadhaarNumber: true,
         panNumber: true,
       },
@@ -192,16 +200,28 @@ export const start = async (req: AuthRequest, res: Response): Promise<void> => {
       return;
     }
 
-    const results = await Promise.all(
-      types.map((type) =>
-        runVerify({
-          type,
-          candidateId: id,
-          aadhaar,
-          pan,
-        })
-      )
+    const duplicateConflict = await findCandidateFieldConflict(
+      {
+        email: normalizeCandidateEmail(candidate.email),
+        phone: normalizeCandidatePhone(candidate.phone),
+        panNumber: pan ?? undefined,
+        aadhaarNumber: aadhaar ?? undefined,
+      },
+      id
     );
+
+    const results = duplicateConflict
+      ? buildDuplicateVerificationFailure(types, id, duplicateConflict)
+      : await Promise.all(
+          types.map((type) =>
+            runVerify({
+              type,
+              candidateId: id,
+              aadhaar,
+              pan,
+            })
+          )
+        );
 
     await prisma.verificationLog.createMany({
       data: results.map((v) => ({
@@ -230,7 +250,12 @@ export const start = async (req: AuthRequest, res: Response): Promise<void> => {
     });
 
     res.status(200).json({
-      message: 'Verification process completed',
+      message: duplicateConflict
+        ? 'Verification failed: duplicate identity on another candidate'
+        : 'Verification process completed',
+      duplicateConflict: duplicateConflict
+        ? { field: duplicateConflict.field, error: duplicateConflict.message }
+        : undefined,
       overallStatus: status,
       verifications: results.map((v) => ({
         type: v.type,

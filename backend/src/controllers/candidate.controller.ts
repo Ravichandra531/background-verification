@@ -1,8 +1,42 @@
 import { Response } from 'express';
+import { Prisma } from '@prisma/client';
 import prisma from '../config/database.js';
 import { AuthRequest } from '../types/index.js';
 import { encrypt, decrypt } from '../utils/encryption.js';
 import { maskAadhaar, maskPan, maskEmail, maskPhone } from '../utils/masking.js';
+import { normalizePan } from '../utils/documentValidation.js';
+import { hashPanForLookup } from '../utils/fieldHash.js';
+import {
+  findCandidateFieldConflict,
+  normalizeCandidateEmail,
+  normalizeCandidatePhone,
+} from '../utils/candidateUniqueness.js';
+
+const conflictResponse = (
+  res: Response,
+  conflict: { field: string; message: string }
+): void => {
+  res.status(409).json({ error: conflict.message, field: conflict.field });
+};
+
+const handlePrismaUniqueError = (err: unknown, res: Response): boolean => {
+  if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+    const target = Array.isArray(err.meta?.target)
+      ? (err.meta.target as string[])[0]
+      : String(err.meta?.target ?? 'field');
+    const messages: Record<string, string> = {
+      email: 'A candidate with this email already exists',
+      phone: 'A candidate with this phone number already exists',
+      panHash: 'A candidate with this PAN already exists',
+    };
+    res.status(409).json({
+      error: messages[target] ?? 'A candidate with these details already exists',
+      field: target === 'panHash' ? 'panNumber' : target,
+    });
+    return true;
+  }
+  return false;
+};
 
 export const getCandidates = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -74,13 +108,29 @@ export const createCandidate = async (req: AuthRequest, res: Response): Promise<
       address: string;
     };
 
+    const normalizedEmail = normalizeCandidateEmail(email);
+    const normalizedPhone = normalizeCandidatePhone(phone);
+    const normalizedPan = normalizePan(panNumber);
+
+    const conflict = await findCandidateFieldConflict({
+      email: normalizedEmail,
+      phone: normalizedPhone,
+      panNumber: normalizedPan,
+      aadhaarNumber: aadhaarNumber,
+    });
+    if (conflict) {
+      conflictResponse(res, conflict);
+      return;
+    }
+
     const candidate = await prisma.candidate.create({
       data: {
         fullName,
-        email,
-        phone,
+        email: normalizedEmail,
+        phone: normalizedPhone,
         aadhaarNumber: encrypt(aadhaarNumber),
-        panNumber: encrypt(panNumber),
+        panNumber: encrypt(normalizedPan),
+        panHash: hashPanForLookup(normalizedPan),
         dob: new Date(dob),
         address,
         status: 'pending',
@@ -93,10 +143,10 @@ export const createCandidate = async (req: AuthRequest, res: Response): Promise<
       candidate: {
         id: candidate.id,
         fullName: candidate.fullName,
-        email: maskEmail(email),
-        phone: maskPhone(phone),
+        email: maskEmail(normalizedEmail),
+        phone: maskPhone(normalizedPhone),
         aadhaarNumber: maskAadhaar(aadhaarNumber),
-        panNumber: maskPan(panNumber),
+        panNumber: maskPan(normalizedPan),
         dob: candidate.dob,
         address: candidate.address,
         status: candidate.status,
@@ -104,6 +154,7 @@ export const createCandidate = async (req: AuthRequest, res: Response): Promise<
       },
     });
   } catch (err) {
+    if (handlePrismaUniqueError(err, res)) return;
     console.error('Create candidate error:', err instanceof Error ? err.message : err);
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -180,12 +231,33 @@ export const updateCandidate = async (req: AuthRequest, res: Response): Promise<
       return;
     }
 
+    const normalizedEmail = email ? normalizeCandidateEmail(email) : undefined;
+    const normalizedPhone = phone ? normalizeCandidatePhone(phone) : undefined;
+    const normalizedPan = panNumber ? normalizePan(panNumber) : undefined;
+
+    const conflict = await findCandidateFieldConflict(
+      {
+        email: normalizedEmail,
+        phone: normalizedPhone,
+        panNumber: normalizedPan,
+        aadhaarNumber,
+      },
+      id
+    );
+    if (conflict) {
+      conflictResponse(res, conflict);
+      return;
+    }
+
     const data: Record<string, unknown> = {
       ...(fullName && { fullName }),
-      ...(email && { email }),
-      ...(phone && { phone }),
+      ...(normalizedEmail && { email: normalizedEmail }),
+      ...(normalizedPhone && { phone: normalizedPhone }),
       ...(aadhaarNumber && { aadhaarNumber: encrypt(aadhaarNumber) }),
-      ...(panNumber && { panNumber: encrypt(panNumber) }),
+      ...(normalizedPan && {
+        panNumber: encrypt(normalizedPan),
+        panHash: hashPanForLookup(normalizedPan),
+      }),
       ...(dob && { dob: new Date(dob) }),
       ...(address && { address }),
       ...(status && { status }),
@@ -215,6 +287,7 @@ export const updateCandidate = async (req: AuthRequest, res: Response): Promise<
       },
     });
   } catch (err) {
+    if (handlePrismaUniqueError(err, res)) return;
     console.error('Update candidate error:', err instanceof Error ? err.message : err);
     res.status(500).json({ error: 'Internal server error' });
   }

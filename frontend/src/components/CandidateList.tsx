@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import api from '../services/api';
 import { Candidate } from '../types';
 import { getStatusBadgeClasses } from '../utils/status';
-import { getApiErrorMessage } from '../utils/apiError';
+import { getApiError } from '../utils/apiError';
+import { formatAadhaarDisplay, stripAadhaarDigits } from '../utils/aadhaar';
 import { 
   Search, 
   ChevronLeft, 
@@ -89,8 +90,10 @@ export default function CandidateList({ onViewDetails, openCreateImmediately, on
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
     reset,
+    setError,
   } = useForm<CandidateFormValues>({
     resolver: zodResolver(candidateFormSchema),
   });
@@ -160,8 +163,8 @@ export default function CandidateList({ onViewDetails, openCreateImmediately, on
         fullName: fullDetails.fullName,
         email: fullDetails.email,
         phone: fullDetails.phone,
-        aadhaarNumber: '123412341234',
-        panNumber: 'ABCDE1234F',
+        aadhaarNumber: fullDetails.aadhaarNumber || '',
+        panNumber: fullDetails.panNumber || '',
         dob: formattedDOB,
         address: fullDetails.address,
       });
@@ -173,6 +176,14 @@ export default function CandidateList({ onViewDetails, openCreateImmediately, on
     }
   };
 
+  const applyFormApiError = (error: unknown, fallback: string) => {
+    const { message, field } = getApiError(error, fallback);
+    if (field === 'email' || field === 'phone' || field === 'panNumber' || field === 'aadhaarNumber') {
+      setError(field, { type: 'server', message });
+    }
+    setServerError(message);
+  };
+
   const handleCreate = async (data: CandidateFormValues) => {
     setSubmitting(true);
     setServerError(null);
@@ -181,7 +192,7 @@ export default function CandidateList({ onViewDetails, openCreateImmediately, on
       setIsAddModalOpen(false);
       loadCandidates();
     } catch (error: unknown) {
-      setServerError(getApiErrorMessage(error, 'Failed to create candidate. Please verify details.'));
+      applyFormApiError(error, 'Failed to create candidate. Please verify details.');
     } finally {
       setSubmitting(false);
     }
@@ -193,14 +204,16 @@ export default function CandidateList({ onViewDetails, openCreateImmediately, on
     setServerError(null);
     try {
       const payload: Partial<CandidateFormValues> = { ...data };
-      if (payload.aadhaarNumber === '123412341234') delete payload.aadhaarNumber;
-      if (payload.panNumber === 'ABCDE1234F') delete payload.panNumber;
+      const aadhaarDigits = stripAadhaarDigits(payload.aadhaarNumber || '');
+      if (aadhaarDigits.length !== 12) delete payload.aadhaarNumber;
+      else payload.aadhaarNumber = aadhaarDigits;
+      if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(payload.panNumber || '')) delete payload.panNumber;
 
       await api.put(`/api/candidates/${selectedCandidate.id}`, payload);
       setIsEditModalOpen(false);
       loadCandidates();
     } catch (error: unknown) {
-      setServerError(getApiErrorMessage(error, 'Failed to update candidate details.'));
+      applyFormApiError(error, 'Failed to update candidate details.');
     } finally {
       setSubmitting(false);
     }
@@ -501,18 +514,36 @@ export default function CandidateList({ onViewDetails, openCreateImmediately, on
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="mb-1 block text-xs font-medium text-slate-700">
-                    Aadhaar Number (12 digits)
+                    Aadhaar Number
                   </label>
                   <div className="relative group">
                     <Fingerprint className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                    <input
-                      {...register('aadhaarNumber')}
-                      type="text"
-                      inputMode="numeric"
-                      placeholder="123412341234"
-                      maxLength={12}
-                      disabled={isEditModalOpen}
-                      className="w-full rounded-md border border-slate-200 py-2.5 pl-9 pr-4 text-sm disabled:bg-slate-50 disabled:opacity-50 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                    <Controller
+                      name="aadhaarNumber"
+                      control={control}
+                      render={({ field }) => (
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          autoComplete="off"
+                          placeholder="1234-1234-1234"
+                          maxLength={14}
+                          disabled={isEditModalOpen}
+                          value={
+                            isEditModalOpen
+                              ? field.value
+                              : formatAadhaarDisplay(field.value)
+                          }
+                          onChange={(e) => {
+                            if (isEditModalOpen) return;
+                            field.onChange(stripAadhaarDigits(e.target.value));
+                          }}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                          className="w-full rounded-md border border-slate-200 py-2.5 pl-9 pr-4 text-sm font-mono tracking-wide disabled:bg-slate-50 disabled:opacity-50 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                        />
+                      )}
                     />
                   </div>
                   {errors.aadhaarNumber && (

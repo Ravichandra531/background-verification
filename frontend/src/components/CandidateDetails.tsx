@@ -64,10 +64,19 @@ export default function CandidateDetails({ candidateId, onBack }: CandidateDetai
     setVerifying(true);
     setActionError(null);
     try {
-      await api.post(`/api/verifications/${candidateId}/start`, { verificationType: type });
+      const response = await api.post(`/api/verifications/${candidateId}/start`, {
+        verificationType: type,
+      });
+      if (response.data.duplicateConflict?.error) {
+        setActionError(response.data.duplicateConflict.error);
+      }
       await fetchDetails();
-    } catch {
-      setActionError('Verification failed. Ensure the backend and mock API are running.');
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { error?: string } } };
+      setActionError(
+        err.response?.data?.error ||
+          'Verification failed. Ensure the backend and mock API are running.'
+      );
     } finally {
       setVerifying(false);
     }

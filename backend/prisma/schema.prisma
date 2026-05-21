@@ -20,10 +20,11 @@ model User {
 model Candidate {
   id               String            @id @default(uuid())
   fullName         String
-  email            String
-  phone            String
+  email            String            @unique
+  phone            String            @unique
   aadhaarNumber    String
   panNumber        String
+  panHash          String?           @unique
   dob              DateTime
   address          String
   status           String
@@ -32,7 +33,6 @@ model Candidate {
   createdBy        User              @relation(fields: [createdById], references: [id])
   verificationLogs VerificationLog[]
 
-  @@index([email])
   @@index([status])
 }
 
