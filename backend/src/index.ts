@@ -4,7 +4,6 @@ import dotenv from 'dotenv';
 import { apiLimiter } from './middleware/rateLimiter.js';
 import { requestLogger } from './middleware/requestLogger.js';
 import { logger } from './utils/logger.js';
-import healthRoutes from './routes/health.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import candidateRoutes from './routes/candidate.routes.js';
 import verificationRoutes from './routes/verification.routes.js';
@@ -28,7 +27,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use(requestLogger);
-app.use(healthRoutes);
 app.use('/api', apiLimiter);
 
 app.use('/api/auth', authRoutes);
