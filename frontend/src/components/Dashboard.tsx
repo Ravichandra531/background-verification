@@ -3,18 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { Candidate, User } from '../types';
+import { getStatusBadgeClasses } from '../utils/status';
+import { formatDateGB } from '../utils/format';
 import { Users, CheckCircle2, AlertCircle, Clock, ArrowRight, Plus } from 'lucide-react';
 
 interface DashboardProps {
   user: User;
   onNavigate: (view: 'dashboard' | 'candidates' | 'admin' | 'add-candidate', extra?: { candidateId?: string }) => void;
-}
-
-function statusClass(status: string) {
-  if (status === 'verified') return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-  if (status === 'failed') return 'bg-red-50 text-red-700 border-red-200';
-  if (status === 'partial') return 'bg-amber-50 text-amber-800 border-amber-200';
-  return 'bg-slate-100 text-slate-600 border-slate-200';
 }
 
 export default function Dashboard({ user, onNavigate }: DashboardProps) {
@@ -75,10 +70,10 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
         <div className="mt-4 flex flex-wrap gap-3">
           <button
             type="button"
-            onClick={() => onNavigate('dashboard')}
-            className="inline-flex items-center gap-2 rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+            onClick={() => onNavigate('candidates')}
+            className="inline-flex items-center gap-2 rounded-md border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
           >
-            Verify BGC
+            View candidates
           </button>
           <button
             type="button"
@@ -148,12 +143,12 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                       <div className="text-xs text-slate-500">{candidate.email}</div>
                     </td>
                     <td className="px-5 py-3">
-                      <span className={`inline-flex rounded-md border px-2 py-0.5 text-xs font-medium capitalize ${statusClass(candidate.status)}`}>
+                      <span className={`inline-flex rounded-md border px-2 py-0.5 text-xs font-medium capitalize ${getStatusBadgeClasses(candidate.status)}`}>
                         {candidate.status}
                       </span>
                     </td>
                     <td className="px-5 py-3 text-slate-500">
-                      {new Date(candidate.createdAt).toLocaleDateString('en-GB')}
+                      {formatDateGB(candidate.createdAt, { day: '2-digit', month: 'short', year: 'numeric' })}
                     </td>
                     <td className="px-5 py-3 text-right">
                       <button

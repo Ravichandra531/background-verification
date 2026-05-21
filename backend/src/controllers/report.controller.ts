@@ -1,111 +1,98 @@
 import { Response } from 'express';
 import prisma from '../config/database.js';
-import crypto from 'crypto';
 import { AuthRequest } from '../types/index.js';
+import { decrypt } from '../utils/encryption.js';
+import { maskAadhaar, maskPan } from '../utils/masking.js';
+import { generateReportPDF } from '../utils/pdfGenerator.js';
 
-const ALG = 'aes-256-gcm';
-if (!process.env.ENCRYPTION_KEY) {
-  throw new Error('ENCRYPTION_KEY must be defined in the environment variables');
-}
-const KEY_ENV = process.env.ENCRYPTION_KEY;
+type CandidateWithLogs = Awaited<ReturnType<typeof loadCandidateForReport>>;
 
-const getKey = (): Buffer => {
-  const key = Buffer.from(KEY_ENV.slice(0, 64), 'hex');
-  if (key.length !== 32) {
-    throw new Error('Key must be 32 bytes');
-  }
-  return key;
+const loadCandidateForReport = async (id: string, req: AuthRequest) => {
+  const whereClause =
+    req.user?.role === 'admin' ? { id } : { id, createdById: req.user?.userId };
+
+  return prisma.candidate.findFirst({
+    where: whereClause,
+    include: {
+      verificationLogs: {
+        orderBy: { verifiedAt: 'desc' },
+      },
+      createdBy: {
+        select: { name: true, email: true },
+      },
+    },
+  });
 };
 
-const decrypt = (text: string | null): string | null => {
-  if (!text) return null;
-  try {
-    const parts = text.split(':');
-    if (parts.length !== 3) {
-      throw new Error('Invalid format');
-    }
-    const iv = Buffer.from(parts[0], 'hex');
-    const tag = Buffer.from(parts[1], 'hex');
-    const enc = parts[2];
-    const decipher = crypto.createDecipheriv(ALG, getKey(), iv);
-    decipher.setAuthTag(tag);
-    let dec = decipher.update(enc, 'hex', 'utf8');
-    dec += decipher.final('utf8');
-    return dec;
-  } catch (err) {
-    console.error('Decryption error:', err instanceof Error ? err.message : err);
-    throw new Error('Failed to decrypt');
-  }
-};
+const buildReportData = (candidate: NonNullable<CandidateWithLogs>, req: AuthRequest) => {
+  const aadhaar = decrypt(candidate.aadhaarNumber);
+  const pan = decrypt(candidate.panNumber);
 
-const maskAadhaar = (val: string | null): string => {
-  if (!val || val.length !== 12) return 'XXXX-XXXX-XXXX';
-  return `XXXX-XXXX-${val.slice(-4)}`;
-};
-
-const maskPan = (val: string | null): string => {
-  if (!val || val.length !== 10) return 'XXXXXXXXXX';
-  return `XXXXX${val.slice(5, 9)}X`;
+  return {
+    candidateInfo: {
+      candidateId: candidate.id,
+      fullName: candidate.fullName,
+      email: candidate.email,
+      phone: candidate.phone,
+      aadhaarNumber: maskAadhaar(aadhaar),
+      panNumber: maskPan(pan),
+      dob: candidate.dob.toISOString(),
+      address: candidate.address,
+    },
+    verificationStatus: candidate.status,
+    verifications: candidate.verificationLogs.map((log) => ({
+      type: log.verificationType,
+      status: log.verificationStatus,
+      verifiedAt: log.verifiedAt,
+    })),
+    generatedAt: new Date(),
+    verifiedBy: candidate.createdBy?.name || 'Unknown',
+    verifiedByEmail: candidate.createdBy?.email || req.user?.email,
+  };
 };
 
 export const downloadReport = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params as { id: string };
-    const candidate = await prisma.candidate.findFirst({
-      where: {
-        id,
-        createdById: req.user?.userId,
-      },
-      include: {
-        verificationLogs: {
-          orderBy: { verifiedAt: 'desc' },
-        },
-      },
-    });
+    const candidate = await loadCandidateForReport(id, req);
 
     if (!candidate) {
       res.status(404).json({ error: 'Candidate not found' });
       return;
     }
 
-    const aadhaar = decrypt(candidate.aadhaarNumber);
-    const pan = decrypt(candidate.panNumber);
-
-    const verifier = req.user?.userId
-      ? await prisma.user.findUnique({
-          where: { id: req.user.userId },
-          select: { name: true, email: true },
-        })
-      : null;
-
-    const report = {
-      candidateInfo: {
-        fullName: candidate.fullName,
-        email: candidate.email,
-        phone: candidate.phone,
-        aadhaarNumber: maskAadhaar(aadhaar),
-        panNumber: maskPan(pan),
-        dob: candidate.dob,
-        address: candidate.address,
-      },
-      verificationStatus: candidate.status,
-      verifications: candidate.verificationLogs.map(log => ({
-        type: log.verificationType,
-        status: log.verificationStatus,
-        verifiedAt: log.verifiedAt,
-        details: log.responsePayload,
-      })),
-      generatedAt: new Date().toISOString(),
-      verifiedBy: verifier?.name || verifier?.email || req.user?.email || 'Unknown',
-      verifiedByEmail: verifier?.email || req.user?.email,
-    };
-
     res.status(200).json({
       message: 'Report generated successfully',
-      report,
+      report: buildReportData(candidate, req),
     });
   } catch (err) {
     console.error('Download report error:', err);
     res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const downloadReportPDF = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params as { id: string };
+    const candidate = await loadCandidateForReport(id, req);
+
+    if (!candidate) {
+      res.status(404).json({ error: 'Candidate not found' });
+      return;
+    }
+
+    const reportData = buildReportData(candidate, req);
+    const pdfBuffer = await generateReportPDF(reportData);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="verification-report-${candidate.id}-${Date.now()}.pdf"`
+    );
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error('PDF generation error:', error);
+    res.status(500).json({ error: 'Failed to generate PDF' });
   }
 };

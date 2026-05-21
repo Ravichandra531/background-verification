@@ -1,5 +1,5 @@
 import express from 'express';
-import { downloadReport } from '../controllers/report.controller.js';
+import { downloadReport, downloadReportPDF } from '../controllers/report.controller.js';
 import { authenticate } from '../middleware/auth.js';
 import { z } from 'zod';
 import { validate } from '../middleware/validator.js';
@@ -14,6 +14,10 @@ const reportSchema = z.object({
 
 router.use(authenticate);
 
+// GET /api/reports/:id - JSON report
 router.get('/:id', validate(reportSchema), downloadReport);
+
+// GET /api/reports/:id/pdf - PDF report
+router.get('/:id/pdf', validate(reportSchema), downloadReportPDF);
 
 export default router;

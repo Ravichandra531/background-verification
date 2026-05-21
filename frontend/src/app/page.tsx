@@ -18,16 +18,14 @@ export default function Home() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    queueMicrotask(() => {
       const savedToken = localStorage.getItem('token') || sessionStorage.getItem('token');
       const savedUser = localStorage.getItem('user') || sessionStorage.getItem('user');
-      const u = savedToken && savedUser ? JSON.parse(savedUser) as User : null;
-      
-      Promise.resolve().then(() => {
-        if (u) setUser(u);
-        setLoading(false);
-      });
-    }
+      if (savedToken && savedUser) {
+        setUser(JSON.parse(savedUser) as User);
+      }
+      setLoading(false);
+    });
   }, []);
 
   const handleAuthSuccess = (authenticatedUser: User, jwtToken: string, remember: boolean) => {
@@ -96,7 +94,6 @@ export default function Home() {
         <CandidateDetails
           candidateId={selectedCandidateId}
           onBack={() => setSelectedCandidateId(null)}
-          user={user}
         />
       );
     }
@@ -104,10 +101,7 @@ export default function Home() {
       case 'candidates':
         return (
           <CandidateList
-            onViewDetails={(id) => {
-              setSelectedCandidateId(id);
-              setView('candidates');
-            }}
+            onViewDetails={(id) => setSelectedCandidateId(id)}
             openCreateImmediately={openCreateImmediately}
             onClearCreateFlag={() => setOpenCreateImmediately(false)}
           />

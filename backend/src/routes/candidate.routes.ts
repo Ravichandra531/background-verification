@@ -29,8 +29,9 @@ const createSchema = z.object({
       .regex(/^[0-9]{12}$/, 'Aadhaar must be a valid 12-digit number')
       .trim(),
     panNumber: z.string()
-      .regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, 'PAN must be in valid format (e.g., ABCDE1234F)')
-      .trim(),
+      .trim()
+      .transform((val) => val.toUpperCase())
+      .pipe(z.string().regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, 'PAN must be in valid format (e.g., ABCDE1234F)')),
     dob: z.string()
       .datetime({ message: 'Date of birth must be a valid date' })
       .or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')),

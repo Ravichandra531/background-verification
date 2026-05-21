@@ -5,27 +5,27 @@ const app = express();
 app.use(express.json());
 
 // Test route that throws error
-app.get('/api/test-error', (req, res) => {
+app.get('/api/test-error', (_req, _res) => {
   throw new Error('Test error');
 });
 
 // Test route that returns 500
-app.get('/api/test-500', (req, res) => {
+app.get('/api/test-500', (_req, res) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
 // Test route that returns 404
-app.get('/api/test-404', (req, res) => {
+app.get('/api/test-404', (_req, res) => {
   res.status(404).json({ error: 'Not found' });
 });
 
 // Test route that returns 400
-app.get('/api/test-400', (req, res) => {
+app.get('/api/test-400', (_req, res) => {
   res.status(400).json({ error: 'Bad request' });
 });
 
 // Error handling middleware
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   const status = 'status' in err ? (err.status as number) : 500;
   const message = err.message || 'Internal server error';
   res.status(status).json({ error: message });

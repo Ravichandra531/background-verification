@@ -30,42 +30,53 @@ export default function AdminPanel({ onViewCandidate }: AdminPanelProps) {
   useEffect(() => {
     let active = true;
 
-    const loadData = async () => {
-      if (active) setLoading(true);
+    const loadOverview = async () => {
+      setLoading(true);
       try {
         const [statsRes, usersRes] = await Promise.all([
           api.get('/api/admin/stats'),
-          api.get('/api/admin/users')
+          api.get('/api/admin/users'),
         ]);
         if (active) {
           setStats(statsRes.data.stats);
           setUsers(usersRes.data.users || []);
         }
       } catch (error) {
-        console.error('Error loading admin details:', error);
+        console.error('Error loading admin overview:', error);
+      } finally {
+        if (active) setLoading(false);
       }
-
-      try {
-        const statusParam = candStatus !== 'all' ? `&status=${candStatus}` : '';
-        const res = await api.get(`/api/admin/candidates?page=${candPage}&limit=10${statusParam}`);
-        if (active) {
-          setAllCandidates(res.data.candidates || []);
-        }
-      } catch (error) {
-        console.error('Error loading global candidates:', error);
-      }
-
-      if (active) setLoading(false);
     };
 
-    Promise.resolve().then(() => {
-      loadData();
-    });
-
+    void loadOverview();
     return () => {
       active = false;
     };
-  }, [candPage, candStatus]);
+  }, []);
+
+  useEffect(() => {
+    if (activeTab !== 'candidates') return;
+
+    let active = true;
+    const statusParam = candStatus !== 'all' ? `&status=${candStatus}` : '';
+
+    const loadCandidates = async () => {
+      setLoading(true);
+      try {
+        const res = await api.get(`/api/admin/candidates?page=${candPage}&limit=10${statusParam}`);
+        if (active) setAllCandidates(res.data.candidates || []);
+      } catch (error) {
+        console.error('Error loading global candidates:', error);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    void loadCandidates();
+    return () => {
+      active = false;
+    };
+  }, [activeTab, candPage, candStatus]);
 
   const handleRoleToggle = async (userId: string, currentRole: string) => {
     const nextRole = currentRole === 'admin' ? 'user' : 'admin';
@@ -93,13 +104,11 @@ export default function AdminPanel({ onViewCandidate }: AdminPanelProps) {
     try {
       setLoading(true);
       await api.delete(`/api/admin/candidates/${candidateId}`);
-      const [statsRes, usersRes, res] = await Promise.all([
+      const [statsRes, res] = await Promise.all([
         api.get('/api/admin/stats'),
-        api.get('/api/admin/users'),
-        api.get(`/api/admin/candidates?page=${candPage}&limit=10${candStatus !== 'all' ? `&status=${candStatus}` : ''}`)
+        api.get(`/api/admin/candidates?page=${candPage}&limit=10${candStatus !== 'all' ? `&status=${candStatus}` : ''}`),
       ]);
       setStats(statsRes.data.stats);
-      setUsers(usersRes.data.users || []);
       setAllCandidates(res.data.candidates || []);
     } catch (err) {
       console.error(err);
@@ -114,14 +123,17 @@ export default function AdminPanel({ onViewCandidate }: AdminPanelProps) {
     try {
       setLoading(true);
       await api.delete(`/api/admin/users/${userId}`);
-      const [statsRes, usersRes, res] = await Promise.all([
+      const [statsRes, usersRes] = await Promise.all([
         api.get('/api/admin/stats'),
         api.get('/api/admin/users'),
-        api.get(`/api/admin/candidates?page=${candPage}&limit=10${candStatus !== 'all' ? `&status=${candStatus}` : ''}`)
       ]);
       setStats(statsRes.data.stats);
       setUsers(usersRes.data.users || []);
-      setAllCandidates(res.data.candidates || []);
+      if (activeTab === 'candidates') {
+        const statusParam = candStatus !== 'all' ? `&status=${candStatus}` : '';
+        const res = await api.get(`/api/admin/candidates?page=${candPage}&limit=10${statusParam}`);
+        setAllCandidates(res.data.candidates || []);
+      }
     } catch (error: unknown) {
       const err = error as { response?: { data?: { error?: string } } };
       alert(err.response?.data?.error || 'Delete user operation failed.');

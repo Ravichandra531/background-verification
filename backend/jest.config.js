@@ -12,10 +12,7 @@ export default {
   transform: {
     '^.+\\.ts$': ['ts-jest', {
       useESM: true,
-      tsconfig: {
-        module: 'ESNext',
-        target: 'ES2020',
-      },
+      tsconfig: 'tsconfig.test.json',
     }],
   },
   extensionsToTreatAsEsm: ['.ts'],

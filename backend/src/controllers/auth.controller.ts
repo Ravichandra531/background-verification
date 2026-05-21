@@ -3,21 +3,24 @@ import prisma from '../config/database.js';
 import bcrypt from 'bcrypt';
 import { generateToken } from '../config/jwt.js';
 
-const SALT = parseInt(process.env.BCRYPT_SALT || '10', 10);
+const SALT = 10;
 const passRe = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/;
+
+const publicUser = (user: { id: string; name: string; email: string; role: string }) => ({
+  id: user.id,
+  name: user.name,
+  email: user.email,
+  role: user.role,
+});
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
     const { name, email, password } = req.body as { name: string; email: string; password: string };
 
-    if (!name || !email || !password) {
-      res.status(400).json({ error: 'Missing required parameters fields.' });
-      return;
-    }
-
     if (!passRe.test(password)) {
-      res.status(400).json({ 
-        error: 'Password must be at least 8 characters long and contain uppercase, lowercase, numbers, and special characters.' 
+      res.status(400).json({
+        error:
+          'Password must be at least 8 characters long and contain uppercase, lowercase, numbers, and special characters.',
       });
       return;
     }
@@ -34,15 +37,15 @@ export const register = async (req: Request, res: Response): Promise<void> => {
         name,
         email,
         passwordHash: hash,
-        role: 'user', 
-      }
+        role: 'user',
+      },
     });
 
     const token = generateToken({ userId: user.id, email: user.email, role: user.role });
 
     res.status(201).json({
       message: 'User registered successfully',
-      user,
+      user: publicUser(user),
       token,
     });
   } catch (err) {
@@ -54,11 +57,6 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password } = req.body as { email: string; password: string };
-
-    if (!email || !password) {
-      res.status(400).json({ error: 'Email and password fields are required.' });
-      return;
-    }
 
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
@@ -76,12 +74,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
     res.status(200).json({
       message: 'Login successful',
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
+      user: publicUser(user),
       token,
     });
   } catch (err) {

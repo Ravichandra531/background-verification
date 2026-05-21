@@ -26,6 +26,10 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.get('/health', (_req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
 app.use(requestLogger);
 app.use('/api', apiLimiter);
 
@@ -41,14 +45,11 @@ app.use((_req: Request, res: Response): void => {
 });
 
 app.use((err: Error, req: Request, res: Response, _next: NextFunction): void => {
-  const status = 'status' in err ? (err.status as number) : 500;
-  const message = err.message || 'Internal server error';
   logger.error('Unhandled error', {
     requestId: (req as Request & { requestId?: string }).requestId,
-    status,
-    error: message,
+    error: err.message,
   });
-  res.status(status).json({ error: message });
+  res.status(500).json({ error: 'Internal server error' });
 });
 
 app.listen(PORT, () => {

@@ -6,6 +6,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import api from '../services/api';
 import { Candidate } from '../types';
+import { getStatusBadgeClasses } from '../utils/status';
+import { getApiErrorMessage } from '../utils/apiError';
 import { 
   Search, 
   ChevronLeft, 
@@ -67,6 +69,7 @@ export default function CandidateList({ onViewDetails, openCreateImmediately, on
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [search, setSearch] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   
   // Pagination
@@ -96,7 +99,7 @@ export default function CandidateList({ onViewDetails, openCreateImmediately, on
     setLoading(true);
     try {
       const statusParam = statusFilter !== 'all' ? `&status=${statusFilter}` : '';
-      const searchParam = search ? `&search=${encodeURIComponent(search)}` : '';
+      const searchParam = appliedSearch ? `&search=${encodeURIComponent(appliedSearch)}` : '';
       
       const response = await api.get(`/api/candidates?page=${page}&limit=${limit}${statusParam}${searchParam}`);
       setCandidates(response.data.candidates || []);
@@ -107,7 +110,7 @@ export default function CandidateList({ onViewDetails, openCreateImmediately, on
     } finally {
       setLoading(false);
     }
-  }, [page, statusFilter, search, limit]);
+  }, [page, statusFilter, appliedSearch, limit]);
 
   const openAddModal = useCallback(() => {
     setServerError(null);
@@ -138,8 +141,8 @@ export default function CandidateList({ onViewDetails, openCreateImmediately, on
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setAppliedSearch(search.trim());
     setPage(1);
-    loadCandidates();
   };
 
   const openEditModal = async (candidate: Candidate) => {
@@ -178,8 +181,7 @@ export default function CandidateList({ onViewDetails, openCreateImmediately, on
       setIsAddModalOpen(false);
       loadCandidates();
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { error?: string } } };
-      setServerError(err.response?.data?.error || 'Failed to create candidate. Please verify details.');
+      setServerError(getApiErrorMessage(error, 'Failed to create candidate. Please verify details.'));
     } finally {
       setSubmitting(false);
     }
@@ -198,8 +200,7 @@ export default function CandidateList({ onViewDetails, openCreateImmediately, on
       setIsEditModalOpen(false);
       loadCandidates();
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { error?: string } } };
-      setServerError(err.response?.data?.error || 'Failed to update candidate details.');
+      setServerError(getApiErrorMessage(error, 'Failed to update candidate details.'));
     } finally {
       setSubmitting(false);
     }
@@ -213,13 +214,6 @@ export default function CandidateList({ onViewDetails, openCreateImmediately, on
     } catch (error) {
       console.error('Error deleting candidate:', error);
     }
-  };
-
-  const statusChip = (status: string) => {
-    if (status === 'verified') return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-    if (status === 'failed') return 'bg-red-50 text-red-700 border-red-200';
-    if (status === 'partial') return 'bg-amber-50 text-amber-800 border-amber-200';
-    return 'bg-slate-100 text-slate-600 border-slate-200';
   };
 
   return (
@@ -323,7 +317,7 @@ export default function CandidateList({ onViewDetails, openCreateImmediately, on
                         </div>
                       </td>
                       <td className="px-5 py-4 w-1/6">
-                        <span className={`inline-flex rounded-md border px-2 py-1 text-xs font-medium capitalize whitespace-nowrap ${statusChip(candidate.status)}`}>
+                        <span className={`inline-flex rounded-md border px-2 py-1 text-xs font-medium capitalize whitespace-nowrap ${getStatusBadgeClasses(candidate.status)}`}>
                           {candidate.status}
                         </span>
                       </td>

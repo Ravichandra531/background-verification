@@ -1,42 +1,13 @@
 import { Response } from 'express';
 import prisma from '../config/database.js';
-import crypto from 'crypto';
 import { AuthRequest } from '../types/index.js';
-
-const ALG = 'aes-256-gcm';
-if (!process.env.ENCRYPTION_KEY) {
-  throw new Error('ENCRYPTION_KEY must be defined in the environment variables');
-}
-const KEY_ENV = process.env.ENCRYPTION_KEY;
-
-const getKey = (): Buffer => {
-  const key = Buffer.from(KEY_ENV.slice(0, 64), 'hex');
-  if (key.length !== 32) {
-    throw new Error('Key must be 32 bytes');
-  }
-  return key;
-};
-
-const key = getKey();
-
-export const decrypt = (text: string | null): string | null => {
-  if (!text) return null;
-
-  try {
-    const [ivHex, tagHex, encrypted] = text.split(':');
-    if (!ivHex || !tagHex || !encrypted) {
-      throw new Error('Invalid format');
-    }
-
-    const decipher = crypto.createDecipheriv(ALG, key, Buffer.from(ivHex, 'hex'));
-    decipher.setAuthTag(Buffer.from(tagHex, 'hex'));
-
-    return decipher.update(encrypted, 'hex', 'utf8') + decipher.final('utf8');
-  } catch (err) {
-    console.error('Decryption error:', err instanceof Error ? err.message : err);
-    throw new Error('Failed to decrypt');
-  }
-};
+import { decrypt } from '../utils/encryption.js';
+import {
+  isValidAadhaar,
+  isValidPan,
+  normalizePan,
+} from '../utils/documentValidation.js';
+import { computeCandidateStatus } from '../utils/verificationStatus.js';
 
 const sanitize = (data: Record<string, unknown> = {}): Record<string, unknown> => {
   const sensitive = new Set([
@@ -50,27 +21,9 @@ const sanitize = (data: Record<string, unknown> = {}): Record<string, unknown> =
   ]);
 
   return Object.fromEntries(
-    Object.entries(data).map(([k, v]) => [
-      k,
-      sensitive.has(k) ? '[REDACTED]' : v,
-    ])
+    Object.entries(data).map(([k, v]) => [k, sensitive.has(k) ? '[REDACTED]' : v])
   );
 };
-
-interface VerificationLog {
-  verificationStatus: string;
-}
-
-const calcStatus = (logs: VerificationLog[] = []): string => {
-  if (!logs.length) return 'pending';
-  const list = logs.map((log) => log.verificationStatus);
-  if (list.every((s) => s === 'completed')) return 'verified';
-  if (list.every((s) => s === 'failed')) return 'failed';
-  return 'partial';
-};
-
-const aadhaarRe = /^[0-9]{12}$/;
-const panRe = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
 
 interface VerifyResult {
   status: string;
@@ -84,7 +37,7 @@ const getApiUrl = (): string =>
 
 const handlers = {
   aadhaar: async (num: string): Promise<VerifyResult> => {
-    if (!aadhaarRe.test(num)) {
+    if (!isValidAadhaar(num)) {
       return {
         status: 'failed',
         message: 'Invalid Aadhaar format. Must be exactly 12 numeric digits.',
@@ -108,8 +61,8 @@ const handlers = {
   },
 
   pan: async (num: string): Promise<VerifyResult> => {
-    const normalized = num.toUpperCase();
-    if (!panRe.test(normalized)) {
+    const normalized = normalizePan(num);
+    if (!isValidPan(normalized)) {
       return {
         status: 'failed',
         message: 'Invalid PAN format. Must match ABCDE1234F.',
@@ -133,39 +86,31 @@ const handlers = {
   },
 };
 
+type VerifyType = 'aadhaar' | 'pan';
+
 interface RunParams {
-  type: string;
+  type: VerifyType;
   candidateId: string;
   aadhaar: string | null;
   pan: string | null;
 }
 
 interface VerifyOut {
-  type: string;
+  type: VerifyType;
   requestPayload: Record<string, unknown>;
   responsePayload: VerifyResult;
-  verificationStatus: string;
+  verificationStatus: 'completed' | 'failed';
 }
 
-const runVerify = async ({
-  type,
-  candidateId,
-  aadhaar,
-  pan,
-}: RunParams): Promise<VerifyOut> => {
-  try {
-    let result: VerifyResult;
+const mapApiResultToLogStatus = (result: VerifyResult): 'completed' | 'failed' =>
+  result.status === 'verified' ? 'completed' : 'failed';
 
-    if (type === 'aadhaar') {
-      result = await handlers.aadhaar(aadhaar || '');
-    } else if (type === 'pan') {
-      result = await handlers.pan((pan || '').toUpperCase());
-    } else {
-      result = {
-        status: 'verified',
-        message: `${type} verification completed`,
-      };
-    }
+const runVerify = async ({ type, candidateId, aadhaar, pan }: RunParams): Promise<VerifyOut> => {
+  try {
+    const result =
+      type === 'aadhaar'
+        ? await handlers.aadhaar(aadhaar || '')
+        : await handlers.pan(pan || '');
 
     return {
       type,
@@ -175,9 +120,9 @@ const runVerify = async ({
         timestamp: new Date().toISOString(),
       },
       responsePayload: result,
-      verificationStatus: result.status === 'verified' ? 'completed' : 'failed',
+      verificationStatus: mapApiResultToLogStatus(result),
     };
-  } catch (err) {
+  } catch {
     return {
       type,
       requestPayload: {
@@ -194,10 +139,24 @@ const runVerify = async ({
   }
 };
 
+function resolveTypes(verificationType: string): VerifyType[] {
+  if (verificationType === 'all') return ['aadhaar', 'pan'];
+  if (verificationType === 'aadhaar' || verificationType === 'pan') {
+    return [verificationType];
+  }
+  return [];
+}
+
 export const start = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params as { id: string };
     const { verificationType } = req.body as { verificationType: string };
+
+    const types = resolveTypes(verificationType);
+    if (!types.length) {
+      res.status(400).json({ error: 'Invalid verification type' });
+      return;
+    }
 
     const candidate = await prisma.candidate.findFirst({
       where: {
@@ -219,7 +178,19 @@ export const start = async (req: AuthRequest, res: Response): Promise<void> => {
     const aadhaar = decrypt(candidate.aadhaarNumber);
     const pan = decrypt(candidate.panNumber);
 
-    const types = verificationType === 'all' ? ['aadhaar', 'pan'] : [verificationType];
+    if (types.includes('aadhaar') && !isValidAadhaar(aadhaar)) {
+      res.status(400).json({
+        error: 'Candidate Aadhaar is missing or invalid. Update the record before verifying.',
+      });
+      return;
+    }
+
+    if (types.includes('pan') && !isValidPan(pan)) {
+      res.status(400).json({
+        error: 'Candidate PAN is missing or invalid. Update the record before verifying.',
+      });
+      return;
+    }
 
     const results = await Promise.all(
       types.map((type) =>
@@ -236,27 +207,27 @@ export const start = async (req: AuthRequest, res: Response): Promise<void> => {
       data: results.map((v) => ({
         candidateId: id,
         verificationType: v.type,
-        requestPayload: { timestamp: new Date().toISOString() } as any,
-        responsePayload: { status: v.verificationStatus === 'completed' ? 'verified' : 'failed' } as any,
+        requestPayload: sanitize(v.requestPayload) as object,
+        responsePayload: sanitize(v.responsePayload) as object,
         verificationStatus: v.verificationStatus,
       })),
     });
 
-    const status = calcStatus(results);
+    const allLogs = await prisma.verificationLog.findMany({
+      where: { candidateId: id },
+      select: {
+        verificationType: true,
+        verificationStatus: true,
+        verifiedAt: true,
+      },
+    });
+
+    const status = computeCandidateStatus(allLogs);
 
     await prisma.candidate.update({
       where: { id },
       data: { status },
     });
-
-    console.log(
-      'Verification completed:',
-      sanitize({
-        candidateId: id,
-        types,
-        status,
-      })
-    );
 
     res.status(200).json({
       message: 'Verification process completed',
@@ -264,6 +235,10 @@ export const start = async (req: AuthRequest, res: Response): Promise<void> => {
       verifications: results.map((v) => ({
         type: v.type,
         status: v.verificationStatus,
+        message:
+          typeof v.responsePayload.message === 'string'
+            ? v.responsePayload.message
+            : undefined,
       })),
       summary: {
         total: results.length,

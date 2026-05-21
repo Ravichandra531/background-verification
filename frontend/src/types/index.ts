@@ -3,7 +3,6 @@ export interface User {
   name: string;
   email: string;
   role: 'user' | 'admin';
-  createdAt?: string;
   _count?: {
     candidates: number;
   };
@@ -14,13 +13,12 @@ export interface Candidate {
   fullName: string;
   email: string;
   phone: string;
-  aadhaarNumber: string; // masked
-  panNumber: string; // masked
+  aadhaarNumber: string;
+  panNumber: string;
   dob: string;
   address: string;
   status: 'pending' | 'verified' | 'failed' | 'partial';
   createdAt: string;
-  createdById?: string;
   createdBy?: {
     name: string;
     email: string;
@@ -36,28 +34,6 @@ export interface VerificationLog {
   responsePayload: Record<string, unknown>;
   verificationStatus: 'completed' | 'failed';
   verifiedAt: string;
-}
-
-export interface ReportData {
-  candidateInfo: {
-    fullName: string;
-    email: string;
-    phone: string;
-    aadhaarNumber: string;
-    panNumber: string;
-    dob: string;
-    address: string;
-  };
-  verificationStatus: 'pending' | 'verified' | 'failed' | 'partial';
-  verifications: {
-    type: 'aadhaar' | 'pan';
-    status: 'completed' | 'failed';
-    verifiedAt: string;
-    details: Record<string, unknown>;
-  }[];
-  generatedAt: string;
-  verifiedBy?: string;
-  verifiedByEmail?: string;
 }
 
 export interface AdminStats {

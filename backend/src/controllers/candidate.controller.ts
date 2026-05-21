@@ -1,81 +1,8 @@
 import { Response } from 'express';
 import prisma from '../config/database.js';
-import crypto from 'crypto';
 import { AuthRequest } from '../types/index.js';
-
-const ALG = 'aes-256-gcm';
-if (!process.env.ENCRYPTION_KEY) {
-  throw new Error('ENCRYPTION_KEY must be defined in the environment variables');
-}
-const KEY_ENV = process.env.ENCRYPTION_KEY;
-const IV_LEN = 16;
-
-const getKey = (): Buffer => {
-  const key = Buffer.from(KEY_ENV.slice(0, 64), 'hex');
-  if (key.length !== 32) {
-    throw new Error('Key must be 32 bytes');
-  }
-  return key;
-};
-
-const encrypt = (text: string | null): string | null => {
-  if (!text) return null;
-  try {
-    const iv = crypto.randomBytes(IV_LEN);
-    const cipher = crypto.createCipheriv(ALG, getKey(), iv);
-    let enc = cipher.update(text, 'utf8', 'hex');
-    enc += cipher.final('hex');
-    const tag = cipher.getAuthTag();
-    return iv.toString('hex') + ':' + tag.toString('hex') + ':' + enc;
-  } catch (err) {
-    console.error('Encryption error:', err instanceof Error ? err.message : err);
-    throw new Error('Failed to encrypt');
-  }
-};
-
-const decrypt = (text: string | null): string | null => {
-  if (!text) return null;
-  try {
-    const parts = text.split(':');
-    if (parts.length !== 3) {
-      throw new Error('Invalid format');
-    }
-    const iv = Buffer.from(parts[0], 'hex');
-    const tag = Buffer.from(parts[1], 'hex');
-    const enc = parts[2];
-    const decipher = crypto.createDecipheriv(ALG, getKey(), iv);
-    decipher.setAuthTag(tag);
-    let dec = decipher.update(enc, 'hex', 'utf8');
-    dec += decipher.final('utf8');
-    return dec;
-  } catch (err) {
-    console.error('Decryption error:', err instanceof Error ? err.message : err);
-    throw new Error('Failed to decrypt');
-  }
-};
-
-const maskAadhaar = (val: string | null): string => {
-  if (!val || val.length !== 12) return 'XXXX-XXXX-XXXX';
-  return `XXXX-XXXX-${val.slice(-4)}`;
-};
-
-const maskPan = (val: string | null): string => {
-  if (!val || val.length !== 10) return 'XXXXXXXXXX';
-  return `XXXXX${val.slice(5, 9)}X`;
-};
-
-const maskEmail = (email: string): string => {
-  if (!email) return '';
-  const [user, domain] = email.split('@');
-  if (!domain) return email;
-  const masked = user[0] + '***' + (user.length > 1 ? user.slice(-1) : '');
-  return `${masked}@${domain}`;
-};
-
-const maskPhone = (phone: string): string => {
-  if (!phone || phone.length < 4) return 'XXXXXXXXXX';
-  return 'X'.repeat(phone.length - 4) + phone.slice(-4);
-};
+import { encrypt, decrypt } from '../utils/encryption.js';
+import { maskAadhaar, maskPan, maskEmail, maskPhone } from '../utils/masking.js';
 
 export const getCandidates = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -114,7 +41,7 @@ export const getCandidates = async (req: AuthRequest, res: Response): Promise<vo
       prisma.candidate.count({ where }),
     ]);
 
-    const list = candidates.map(c => ({
+    const list = candidates.map((c) => ({
       ...c,
       email: maskEmail(c.email),
       phone: maskPhone(c.phone),
@@ -147,16 +74,13 @@ export const createCandidate = async (req: AuthRequest, res: Response): Promise<
       address: string;
     };
 
-    const encAadhaar = encrypt(aadhaarNumber);
-    const encPan = encrypt(panNumber);
-
     const candidate = await prisma.candidate.create({
       data: {
         fullName,
         email,
         phone,
-        aadhaarNumber: encAadhaar || '',
-        panNumber: encPan || '',
+        aadhaarNumber: encrypt(aadhaarNumber),
+        panNumber: encrypt(panNumber),
         dob: new Date(dob),
         address,
         status: 'pending',
@@ -194,6 +118,11 @@ export const getCandidateById = async (req: AuthRequest, res: Response): Promise
         id,
         createdById: req.user?.userId,
       },
+      include: {
+        verificationLogs: {
+          orderBy: { verifiedAt: 'desc' },
+        },
+      },
     });
 
     if (!candidate) {
@@ -216,6 +145,7 @@ export const getCandidateById = async (req: AuthRequest, res: Response): Promise
         address: candidate.address,
         status: candidate.status,
         createdAt: candidate.createdAt,
+        verificationLogs: candidate.verificationLogs,
       },
     });
   } catch (err) {
@@ -309,8 +239,6 @@ export const deleteCandidate = async (req: AuthRequest, res: Response): Promise<
     await prisma.candidate.delete({
       where: { id },
     });
-
-    console.log(`Candidate deleted: ${id} by user: ${req.user?.userId}`);
 
     res.status(200).json({
       message: 'Candidate deleted successfully',

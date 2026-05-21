@@ -2,7 +2,9 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
-import { Candidate, VerificationLog, ReportData, User } from '../types';
+import { Candidate, VerificationLog } from '../types';
+import { getStatusBadgeClasses } from '../utils/status';
+import { formatDateGB } from '../utils/format';
 import {
   Mail,
   Phone,
@@ -12,17 +14,14 @@ import {
   Calendar,
   ShieldAlert,
   Play,
-  Printer,
   FileText,
   ChevronLeft,
   Loader2,
-  X,
 } from 'lucide-react';
 
 interface CandidateDetailsProps {
   candidateId: string;
   onBack: () => void;
-  user: User;
 }
 
 function getLatestLogsByType(logs: VerificationLog[]): VerificationLog[] {
@@ -38,19 +37,10 @@ function getLatestLogsByType(logs: VerificationLog[]): VerificationLog[] {
   );
 }
 
-function statusClass(status: string) {
-  if (status === 'verified') return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-  if (status === 'failed') return 'bg-red-50 text-red-700 border-red-200';
-  if (status === 'partial') return 'bg-amber-50 text-amber-800 border-amber-200';
-  return 'bg-slate-100 text-slate-600 border-slate-200';
-}
-
-export default function CandidateDetails({ candidateId, onBack, user }: CandidateDetailsProps) {
+export default function CandidateDetails({ candidateId, onBack }: CandidateDetailsProps) {
   const [candidate, setCandidate] = useState<Candidate | null>(null);
   const [loading, setLoading] = useState(true);
   const [verifying, setVerifying] = useState(false);
-  const [reportData, setReportData] = useState<ReportData | null>(null);
-  const [showReportModal, setShowReportModal] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const fetchDetails = useCallback(async () => {
@@ -66,9 +56,8 @@ export default function CandidateDetails({ candidateId, onBack, user }: Candidat
   }, [candidateId]);
 
   useEffect(() => {
-    Promise.resolve().then(() => {
-      fetchDetails();
-    });
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- load candidate on mount/id change
+    void fetchDetails();
   }, [fetchDetails]);
 
   const handleStartVerification = async (type: 'aadhaar' | 'pan' | 'all') => {
@@ -87,11 +76,20 @@ export default function CandidateDetails({ candidateId, onBack, user }: Candidat
   const handleGenerateReport = async () => {
     setActionError(null);
     try {
-      const response = await api.get(`/api/reports/${candidateId}`);
-      setReportData(response.data.report);
-      setShowReportModal(true);
+      const response = await api.get(`/api/reports/${candidateId}/pdf`, {
+        responseType: 'blob',
+      });
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `verification-report-${candidateId}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
+      window.URL.revokeObjectURL(url);
     } catch {
-      setActionError('Unable to load report.');
+      setActionError('Unable to generate PDF report.');
     }
   };
 
@@ -153,7 +151,7 @@ export default function CandidateDetails({ candidateId, onBack, user }: Candidat
               <h1 className="text-lg font-semibold text-slate-900">{candidate.fullName}</h1>
               <p className="mt-0.5 font-mono text-xs text-slate-400">{candidate.id}</p>
             </div>
-            <span className={`rounded-md border px-2 py-0.5 text-xs font-medium capitalize ${statusClass(candidate.status)}`}>
+            <span className={`rounded-md border px-2 py-0.5 text-xs font-medium capitalize ${getStatusBadgeClasses(candidate.status)}`}>
               {candidate.status}
             </span>
           </div>
@@ -166,9 +164,7 @@ export default function CandidateDetails({ candidateId, onBack, user }: Candidat
               { label: 'PAN', value: candidate.panNumber, icon: CreditCard, mono: true },
               {
                 label: 'Date of birth',
-                value: candidate.dob
-                  ? new Date(candidate.dob).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })
-                  : 'N/A',
+                value: candidate.dob ? formatDateGB(candidate.dob) : 'N/A',
                 icon: Calendar,
               },
             ].map(({ label, value, icon: Icon, mono }) => (
@@ -255,86 +251,6 @@ export default function CandidateDetails({ candidateId, onBack, user }: Candidat
           </ul>
         )}
       </div>
-
-      {showReportModal && reportData && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 print:hidden"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="report-title"
-        >
-          <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg border border-slate-200 bg-white shadow-lg">
-            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-              <h2 id="report-title" className="text-sm font-semibold text-slate-900">
-                Verification report
-              </h2>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  className="inline-flex items-center gap-1 rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800"
-                >
-                  <Printer className="h-3.5 w-3.5" />
-                  Print / PDF
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowReportModal(false)}
-                  className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100"
-                  aria-label="Close"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-            <div id="verification-report-print" className="overflow-y-auto p-6 text-sm text-slate-800">
-              <div className="border-b border-slate-200 pb-4 text-center">
-                <h3 className="text-lg font-semibold text-slate-900">Background Verification Report</h3>
-                <p className="text-xs text-slate-500">Generated {new Date(reportData.generatedAt).toLocaleString('en-GB')}</p>
-              </div>
-              <div className="mt-4 space-y-1">
-                <p><span className="text-slate-500">Candidate:</span> {reportData.candidateInfo.fullName}</p>
-                <p><span className="text-slate-500">Email:</span> {reportData.candidateInfo.email}</p>
-                <p><span className="text-slate-500">Aadhaar:</span>{' '}
-                  {reportData.verifications.find((v) => v.type === 'aadhaar')?.status === 'completed' ? 'Verified' : 'Pending / Failed'}
-                </p>
-                <p><span className="text-slate-500">PAN:</span>{' '}
-                  {reportData.verifications.find((v) => v.type === 'pan')?.status === 'completed' ? 'Verified' : 'Pending / Failed'}
-                </p>
-                <p><span className="text-slate-500">Overall:</span> {reportData.verificationStatus}</p>
-                <p><span className="text-slate-500">Verified by:</span> {reportData.verifiedBy || user.name}</p>
-              </div>
-              <table className="mt-6 w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-slate-200 text-slate-500">
-                    <th className="pb-2">Type</th>
-                    <th className="pb-2">Status</th>
-                    <th className="pb-2 text-right">Date</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {reportData.verifications.map((v) => (
-                    <tr key={v.type}>
-                      <td className="py-2 capitalize">{v.type}</td>
-                      <td className="py-2">{v.status === 'completed' ? 'Verified' : 'Failed'}</td>
-                      <td className="py-2 text-right">{new Date(v.verifiedAt).toLocaleDateString('en-GB')}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div className="mt-8 flex justify-between border-t border-slate-100 pt-4 text-xs text-slate-500">
-                <div>
-                  <p className="font-medium text-slate-700">{reportData.verifiedBy || user.name}</p>
-                  <p>{reportData.verifiedByEmail || user.email}</p>
-                </div>
-                <div className="rounded border border-dashed border-slate-300 px-4 py-2 text-center text-[10px]">
-                  Digital seal placeholder
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
