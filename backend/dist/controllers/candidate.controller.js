@@ -89,8 +89,6 @@ export const createCandidate = async (req, res) => {
         const conflict = await findCandidateFieldConflict({
             email: normalizedEmail,
             phone: normalizedPhone,
-            panNumber: normalizedPan,
-            aadhaarNumber: aadhaarNumber,
         });
         if (conflict) {
             conflictResponse(res, conflict);
@@ -194,8 +192,6 @@ export const updateCandidate = async (req, res) => {
         const conflict = await findCandidateFieldConflict({
             email: normalizedEmail,
             phone: normalizedPhone,
-            panNumber: normalizedPan,
-            aadhaarNumber,
         }, id);
         if (conflict) {
             conflictResponse(res, conflict);
