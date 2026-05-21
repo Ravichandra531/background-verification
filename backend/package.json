@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "prisma generate && tsc",
-    "start": "npm run build && node dist/index.js",
+    "build": "prisma generate && tsc --listEmittedFiles",
+    "start": "node dist/index.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "prisma:generate": "prisma generate",
@@ -17,6 +17,10 @@
   "author": "",
   "license": "ISC",
   "description": "Background Verification Platform API",
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=9.0.0"
+  },
   "dependencies": {
     "@prisma/client": "^5.9.1",
     "bcrypt": "^5.1.1",
